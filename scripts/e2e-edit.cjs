@@ -89,6 +89,30 @@ function check(name, ok, detail = '') {
   // wie im Original: der Text wird als eigener Absatz an den (leeren) Text davor gehängt
   check('Backspace am Anfang löst den Listenpunkt auf', !out.includes('list(ordered=true)') && out.includes('text(`<div>Punkt zwei</div>`'), out.match(/simple\(1[\s\S]*?\n    \}/)?.[0]);
 
+  // ---- Schritte ----
+  await open('specman-reference-v1.4-model-v2.nsd');
+  await page.click(step(0));
+  await page.click('button[title="Einfachen Schritt anlegen"]');
+  await k.type(' X');
+  out = await save();
+  check('Schritt hinter dem fokussierten, Cursor am Textende, Nummern und Verweise nachgezogen',
+    /simple\(2, \w+, `Neuer Schritt \d+ X`/.test(out) && out.includes('while(3, e81623e9') && /simple\(5, 5bfae252,[^\n]*\n[^\n]*markups=\[\(47,47,Steplink\)\]/.test(out));
+  await page.click(step(0));
+  await page.click('button[title="Schritt löschen"]');
+  out = await save();
+  check('Löschen eines referenzierten Schritts markiert den Verweis als defekt', out.includes('by its number 1?.') && out.includes('markups=[(47,48,Steplink)]'));
+  for (let i = 0; i < 3; i++) await k.press('Control+z'); // Löschen, Tippen, Einfügen
+  await page.waitForTimeout(50);
+  check('Undo nach Einfügen und Löschen ergibt das Original', (await save()) === fixture('specman-reference-v1.4-model-v2.nsd'));
+
+  await page.goto(`${BASE}?new`);
+  await page.waitForSelector('.sm-welcome');
+  await page.click('button[title="Case-Schritt anlegen"]');
+  await page.click('text=Sonst');
+  await page.click('button[title="Case-Zweig anlegen"]');
+  out = await save();
+  check('Case-Schritt im leeren Diagramm, Zweig rechts von Sonst', /default_branch\(`Sonst`[\s\S]*case_branch\(`Fall 1`[\s\S]*simple\(2\.1[\s\S]*case_branch\(`Fall 1`[\s\S]*case_branch\(`Fall 2`/.test(out), out.slice(out.indexOf('mainSequence')));
+
   check('keine Fehler im Browser', errors.length === 0, errors.join('\n'));
   await browser.close();
   fs.rmSync(tmp, { recursive: true });

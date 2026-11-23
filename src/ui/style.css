@@ -162,3 +162,11 @@ body.app-drop .app-stage { outline: 3px dashed #3d5aa8; outline-offset: -8px; }
 /* ---- Bearbeiten (Phase 1) ---- */
 .sm-text[contenteditable='true'] { outline: none; min-height: 1lh; cursor: text; }
 .sm-intro:has(> .sm-text:only-child:empty):hover, .sm-outro:has(> .sm-text:only-child:empty):hover { outline: 1px dashed #bbb; }
+
+/* ---- Schrittpalette (StepButtonBar) ---- */
+.app-body { display: flex; align-items: flex-start; }
+.app-body > .app-stage { flex: 1; min-width: 0; }
+.app-palette { position: sticky; top: 41px; display: flex; flex-direction: column; gap: 1px; padding: 8px 4px; background: #fff; border-right: 1px solid #ddd; min-height: calc(100vh - 57px); }
+.app-palette-btn { display: flex; align-items: center; gap: 6px; padding: 3px 8px 3px 4px; border: 1px solid transparent; border-radius: 4px; background: none; font: 12px system-ui, sans-serif; text-align: left; white-space: nowrap; cursor: pointer; }
+.app-palette-btn img { width: 22px; height: 22px; }
+.app-palette-btn:hover { background: #eef; border-color: #ccd; }

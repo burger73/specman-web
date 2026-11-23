@@ -4,6 +4,7 @@ import { readDiagram } from '../core/reader.ts';
 import { writeDiagram } from '../core/writer.ts';
 import { droppedFile, pickFile, saveFile, type OpenedFile } from './files.ts';
 import { currentFocus, restoreFocus } from './focus.ts';
+import { createPalette, deleteFocusedStep, type PaletteHost } from './palette.ts';
 import { renderDiagram } from './render.ts';
 import { format, installTextInput, toggleList, type TextInputHost } from './textinput.ts';
 import './style.css';
@@ -44,6 +45,7 @@ const redoBtn = button('material/redo', 'Wiederholen (Strg+Y)', () => redo());
 const boldBtn = button('material/format_bold', 'Fett (Strg+B)', () => format(doc?.editor, 'bold'));
 const italicBtn = button('material/format_italic', 'Kursiv (Strg+I)', () => format(doc?.editor, 'italic'));
 const underlineBtn = button('material/format_underlined', 'Unterstrichen (Strg+U)', () => format(doc?.editor, 'underline'));
+const deleteBtn = button('material/delete', 'Schritt löschen', () => deleteFocusedStep(textHost));
 const ulBtn = button('material/format_list_bulleted', 'Aufzählung', () => toggleList(textHost, false));
 const olBtn = button('material/format_list_numbered', 'Nummerierte Liste', () => toggleList(textHost, true));
 
@@ -69,10 +71,12 @@ for (const z of ['Datei', '80', '100', '120', '150']) {
 }
 const status = document.createElement('span');
 status.className = 'app-status';
-bar.append(group(newBtn, openBtn, saveBtn, saveAsBtn), group(undoBtn, redoBtn), group(boldBtn, italicBtn, underlineBtn, ulBtn, olBtn), select, zoom, status);
+bar.append(group(newBtn, openBtn, saveBtn, saveAsBtn), group(undoBtn, redoBtn), group(boldBtn, italicBtn, underlineBtn, ulBtn, olBtn), group(deleteBtn), select, zoom, status);
 const stage = document.createElement('main');
 stage.className = 'app-stage';
-app.append(bar, stage);
+const body = document.createElement('div');
+body.className = 'app-body';
+app.append(bar, body);
 
 /** Das geöffnete Dokument; das Modell im Editor ist die Wahrheit, die Darstellung wird daraus neu erzeugt */
 interface Doc {
@@ -182,8 +186,9 @@ function afterUndoRedo(focus: Focus | undefined | null): void {
 
 const undo = () => doc && afterUndoRedo(doc.editor.undo(currentFocus()));
 const redo = () => doc && afterUndoRedo(doc.editor.redo(currentFocus()));
-const textHost: TextInputHost = {
+const textHost: TextInputHost & PaletteHost = {
   editor: () => doc?.editor,
+  diagram: () => doc?.editor.diagram,
   undo,
   redo,
   structural(op) {
@@ -198,6 +203,7 @@ const textHost: TextInputHost = {
   },
 };
 installTextInput(stage, textHost);
+body.append(createPalette(textHost), stage);
 
 document.addEventListener('keydown', (e) => {
   if (!(e.ctrlKey || e.metaKey) || e.altKey) return;

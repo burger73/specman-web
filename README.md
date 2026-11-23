@@ -15,7 +15,8 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten) in Arb
 
 - `src/core` – ohne DOM: generierter Parser, Modell (`model.ts`, entspricht `specman.model.v002`),
   Reader (`ModelParser_V002`), Writer (`ModelSerializer_V002`), Change-Set-Farben, Edit-Kern mit Undo/Redo
-  (`editor.ts`), Schrittnummern (`numbering.ts`), Pfade zu Areas (`paths.ts`)
+  (`editor.ts`), Schrittnummern (`numbering.ts`) und -verweise (`steplinks.ts`), Pfade zu Areas (`paths.ts`),
+  Operationen auf Areas (`areas.ts`) und Schritten (`steps.ts`)
 - `src/ui` – Darstellung nach den Swing-Views, Markups, HTML-Bereinigung
 - `test/fixtures` – die V2-Beispieldateien aus dem Original-Repo
 
@@ -30,6 +31,9 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten) in Arb
 - Ein leeres Diagramm (ohne Schritt) lässt sich nicht speichern, weil die Grammatik mindestens einen Schritt verlangt.
 - Speichern schreibt mit der File System Access API in die geöffnete Datei zurück. Das gibt es nur in Chrome/Edge
   und nur im sicheren Kontext (https oder localhost). Sonst wird die Datei heruntergeladen.
+- Beim Löschen eines Break-Schritts verschwinden die Catch-Sequenzen und Co-Catches mit, die ihn fangen.
+- Fehlermeldungen (z. B. „Der letzte Schritt kann nicht entfernt werden.“) erscheinen als Dialog, das Original
+  gibt manche nur auf der Konsole aus (Sonst-Zweig, mindestens zwei Fälle).
 - Reader: Die Zusatz-Areas eines Listenpunkts behalten ihre Reihenfolge (Java sortiert nach Text/Tabelle/Bild).
 - Writer: schreibt standardmäßig Version 1.4.0 ins Envelope, beim Roundtrip die Version der gelesenen Datei.
 - Nicht in Phase 0: Bearbeiten, PDF-Export, PlantUML-Rendering (Platzhalter mit Quelltext), JSON-Format v1.
