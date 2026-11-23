@@ -16,6 +16,7 @@ import { insertImageDialog, installImageEditing } from './imageedit.ts';
 import { installFocusMoving } from './focusmove.ts';
 import { installSteplinkFollowing, openSteplinkDialog } from './steplinkdialog.ts';
 import { format, installTextInput, toggleList, type TextInputHost } from './textinput.ts';
+import { createTextGroup } from './textformat.ts';
 import './style.css';
 
 // Text-Markups beim Markieren als gelöscht bearbeitet das DOM (recording.ts)
@@ -54,9 +55,13 @@ const saveBtn = button('material/save', 'Speichern (Strg+S)', () => void save(fa
 const saveAsBtn = button('material/save_as', 'Speichern unter … (Strg+Umschalt+S)', () => void save(true));
 const undoBtn = button('material/undo', 'Rückgängig (Strg+Z)', () => undo());
 const redoBtn = button('material/redo', 'Wiederholen (Strg+Y)', () => redo());
-const boldBtn = button('material/format_bold', 'Fett (Strg+B)', () => format(doc?.editor, 'bold'));
-const italicBtn = button('material/format_italic', 'Kursiv (Strg+I)', () => format(doc?.editor, 'italic'));
-const underlineBtn = button('material/format_underlined', 'Unterstrichen (Strg+U)', () => format(doc?.editor, 'underline'));
+const inlineFormat = (command: 'bold' | 'italic' | 'underline') => {
+  format(doc?.editor, command);
+  textGroup.update();
+};
+const boldBtn = button('material/format_bold', 'Fett (Strg+B)', () => inlineFormat('bold'));
+const italicBtn = button('material/format_italic', 'Kursiv (Strg+I)', () => inlineFormat('italic'));
+const underlineBtn = button('material/format_underlined', 'Unterstrichen (Strg+U)', () => inlineFormat('underline'));
 const tableBtn = button('material/table', 'Tabelle einfügen', () => insertTableDialog(textHost));
 const imageBtn = button('material/image', 'Bild einfügen', () => insertImageDialog(textHost));
 const steplinkBtn = button('material/jump_to_element', 'Link auf Schrittnummer...', () => openSteplinkDialog(textHost));
@@ -67,6 +72,19 @@ const collapseAllBtn = button('material/unfold_less', 'Alle Schritte einklappen'
 const expandAllBtn = button('material/unfold_more', 'Alle Schritte ausklappen', () => collapseAll(false));
 const ulBtn = button('material/format_list_bulleted', 'Aufzählung', () => toggleList(textHost, false));
 const olBtn = button('material/format_list_numbered', 'Nummerierte Liste', () => toggleList(textHost, true));
+
+// Text-Werkzeuge in der Reihenfolge von HTMLEditorPane.createToolbarComponents; textHost entsteht erst weiter unten
+const textGroup = createTextGroup(
+  {
+    button,
+    editor: () => doc?.editor,
+    undo: () => undo(),
+    redo: () => redo(),
+    structural: (op) => textHost.structural(op),
+    focus: (f) => textHost.focus(f),
+  },
+  { bold: boldBtn, italic: italicBtn, underline: underlineBtn },
+);
 
 const changes = createChangesGroup({ editor: () => doc?.editor, button, structural: (op) => textHost.structural(op), redraw: () => redraw() });
 
@@ -92,7 +110,7 @@ for (const z of ['Datei', '80', '100', '120', '150']) {
 }
 const status = document.createElement('span');
 status.className = 'app-status';
-bar.append(group(newBtn, openBtn, saveBtn, saveAsBtn), group(undoBtn, redoBtn), group(boldBtn, italicBtn, underlineBtn, ulBtn, olBtn), group(tableBtn, imageBtn, steplinkBtn), group(toneBtn, deleteBtn, borderBtn), group(collapseAllBtn, expandAllBtn), changes.element, select, zoom, status);
+bar.append(group(newBtn, openBtn, saveBtn, saveAsBtn), group(undoBtn, redoBtn), group(...textGroup.head, boldBtn, italicBtn, underlineBtn, ...textGroup.tail), group(ulBtn, olBtn, imageBtn, tableBtn, steplinkBtn), group(toneBtn, deleteBtn, borderBtn), group(collapseAllBtn, expandAllBtn), changes.element, select, zoom, status);
 const stage = document.createElement('main');
 stage.className = 'app-stage';
 const body = document.createElement('div');

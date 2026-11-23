@@ -25,6 +25,59 @@ export interface TextInputHost {
   redraw?(): void;
 }
 
+/** Läuft gerade applyFormat? Dann übernimmt das input-Ereignis von execCommand nichts. */
+let formatting = false;
+
+/** Area ins Modell zurücklesen; aufeinanderfolgende Aufrufe mit demselben Pfad bilden einen Undo-Schritt */
+function writeArea(editor: DiagramEditor, el: HTMLElement, before: Focus | undefined): void {
+  const path = el.dataset.path!;
+  const read = readTextArea(el);
+  editor.apply(
+    (d) => {
+      // Intro/Outro ohne Inhalt gibt es nur in der Darstellung, beim ersten Tippen entstehen sie im Modell
+      if (path === 'intro/areas/0') d.intro ??= content();
+      if (path === 'outro/areas/0') d.outro ??= content();
+      const area = resolvePath(d, path) as TextEditArea | undefined;
+      if (area?.kind !== 'text') throw new Error(`Text-Area ${path} nicht gefunden`);
+      area.text = read.text;
+      area.plainText = read.plainText;
+      area.markups = read.markups;
+    },
+    { mergeKey: path, focus: before },
+  );
+}
+
+/** Text-Area, in der die Auswahl liegt (Anfang und Ende in derselben), mit dem Bereich der Auswahl */
+export function selectedArea(): { el: HTMLElement; range: Range } | undefined {
+  const sel = document.getSelection();
+  if (!sel || sel.rangeCount === 0) return undefined;
+  const range = sel.getRangeAt(0);
+  const start = range.startContainer;
+  const el = (start instanceof Element ? start : start.parentElement)?.closest<HTMLElement>('[data-path]');
+  if (!el || !el.contains(range.endContainer)) return undefined;
+  return { el, range };
+}
+
+/**
+ * Formatierung der Auswahl als eigener Undo-Schritt: change ändert das DOM der Area (auch per execCommand),
+ * danach wird die Area ins Modell übernommen.
+ */
+export function applyFormat(editor: DiagramEditor | undefined, change: (el: HTMLElement, range: Range) => void): boolean {
+  const at = selectedArea();
+  if (!editor || !at) return false;
+  const before = currentFocus();
+  editor.endMerge();
+  formatting = true;
+  try {
+    change(at.el, at.range);
+  } finally {
+    formatting = false;
+  }
+  writeArea(editor, at.el, before);
+  editor.endMerge();
+  return true;
+}
+
 export function installTextInput(stage: HTMLElement, host: TextInputHost): void {
   /** Fokus vor der laufenden Eingabe, landet beim ersten Tastendruck einer Folge im Undo-Schnappschuss */
   let before: Focus | undefined;
@@ -33,21 +86,7 @@ export function installTextInput(stage: HTMLElement, host: TextInputHost): void 
   const commit = (el: HTMLElement, isFormat: boolean): void => {
     const editor = host.editor();
     if (!editor) return;
-    const path = el.dataset.path!;
-    const read = readTextArea(el);
-    editor.apply(
-      (d) => {
-        // Intro/Outro ohne Inhalt gibt es nur in der Darstellung, beim ersten Tippen entstehen sie im Modell
-        if (path === 'intro/areas/0') d.intro ??= content();
-        if (path === 'outro/areas/0') d.outro ??= content();
-        const area = resolvePath(d, path) as TextEditArea | undefined;
-        if (area?.kind !== 'text') throw new Error(`Text-Area ${path} nicht gefunden`);
-        area.text = read.text;
-        area.plainText = read.plainText;
-        area.markups = read.markups;
-      },
-      { mergeKey: path, focus: before },
-    );
+    writeArea(editor, el, before);
     if (isFormat) editor.endMerge();
   };
 
@@ -80,6 +119,8 @@ export function installTextInput(stage: HTMLElement, host: TextInputHost): void 
   });
 
   stage.addEventListener('input', (e) => {
+    // eigene Formatierungen übernehmen das Ergebnis selbst (applyFormat)
+    if (formatting) return;
     const el = (e.target as HTMLElement).closest<HTMLElement>('[data-path]');
     if (!host.editor() || !el) return;
     const type = (e as InputEvent).inputType;

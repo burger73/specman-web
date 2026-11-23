@@ -393,6 +393,135 @@ function check(name, ok, detail = '') {
   check('Strg+Klick auf defekten Verweis meldet sich', dialogs.length === 1 && dialogs[0].startsWith('Springen nicht möglich'), JSON.stringify(dialogs));
   dialogs.length = 0;
 
+  // ---- 3.5 Text-Werkzeuge ----
+  await open(REF);
+  /** Text des Schritts 1 in der gespeicherten Datei (HTML und Klartext) */
+  const step1Html = (text) => /simple\(1, 5582897d, `([^`]*)`/.exec(text)?.[1] ?? '';
+  const paraMenu = async (label) => {
+    await page.click('.app-combo[data-name="paragraph"]');
+    await page.locator('.app-menu-item', { hasText: label }).first().click();
+  };
+  const sizeMenu = async (label) => {
+    await page.click('button[title="Schriftgröße"]');
+    await page.locator('.app-menu-item', { hasText: new RegExp(`^${label}$`) }).click();
+  };
+  const fontMenu = async (label) => {
+    await page.click('.app-combo[data-name="font"]');
+    await page.locator('.app-menu-item', { hasText: label }).click();
+  };
+  /** Wort in einer Area auswählen (erstes Vorkommen) */
+  const selectWord = (p, word) =>
+    page.evaluate(
+      ([p, word]) => {
+        const el = document.querySelector(`[data-path="${CSS.escape(p)}"]`);
+        el.scrollIntoView({ block: 'center' });
+        el.focus();
+        const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        for (let n = w.nextNode(); n; n = w.nextNode()) {
+          const i = n.data.indexOf(word);
+          if (i < 0) continue;
+          getSelection().setBaseAndExtent(n, i, n, i + word.length);
+          return true;
+        }
+        return false;
+      },
+      [p, word],
+    );
+  const pressed = (sel) => page.$eval(sel, (b) => b.classList.contains('app-toggle-on'));
+  const comboText = (name) => page.$eval(`.app-combo[data-name="${name}"]`, (b) => b.textContent);
+  const settle = () => page.waitForTimeout(50);
+
+  await caret(S1, 'end');
+  await page.click('button[title="Zentriert"]');
+  check('Ausrichten von Text ohne Absatz-Element ändert nichts (wie Swing)', (await save()) === fixture(REF));
+  check('Absatzformat zeigt Body Text', (await comboText('paragraph')) === 'Body Text');
+  await paraMenu('Überschrift 1');
+  out = await save();
+  check('Überschrift 1 packt den Text ein', /^<h1>\s*Simple step\.[\s\S]*inserted before\.\s*<\/h1>$/.test(step1Html(out)), step1Html(out).slice(0, 80));
+  check('der Klartext bleibt', step1(out).plain === step1(fixture(REF)).plain);
+  await settle();
+  check('die Combo folgt der Schreibmarke', (await comboText('paragraph')) === 'Überschrift 1');
+  await page.click('button[title="Zentriert"]');
+  out = await save();
+  check('Zentriert setzt align am Absatz', step1Html(out).startsWith('<h1 align="center">'), step1Html(out).slice(0, 40));
+  await settle();
+  check('der Knopf zeigt die Ausrichtung', (await pressed('button[title="Zentriert"]')) && !(await pressed('button[title="Linksbündig"]')));
+  await k.press('Alt+2');
+  out = await save();
+  check('Alt+2: Überschrift 2, align bleibt', step1Html(out).startsWith('<h2 align="center">'), step1Html(out).slice(0, 40));
+  await paraMenu('Vorformatiert');
+  out = await save();
+  check('Vorformatiert fasst den Leerraum zusammen', step1Html(out) === `<pre align="center">${step1(fixture(REF)).plain}</pre>`, step1Html(out).slice(0, 80));
+  check('Schreibmarke bleibt in der Area', (await where()) === S1);
+  await press('Control+z', 4);
+  check('jedes Absatzformat und jede Ausrichtung ist ein Undo-Schritt', (await save()) === fixture(REF));
+
+  // Zeichenformate
+  await selectWord(S1, 'Simple');
+  await sizeMenu('Groß');
+  out = await save();
+  check('Schriftgröße Groß schreibt <font size="5">', step1Html(out).startsWith('<font size="5">Simple</font> step.'), step1Html(out).slice(0, 40));
+  await page.click('button[title="Schriftgröße"]');
+  check('das Größenmenü zeigt die Größe an der Auswahl', (await page.$eval('.app-menu-checked', (b) => b.textContent)) === 'Groß');
+  await k.press('Escape');
+  check('Escape schließt das Menü', (await page.$('.app-menu')) === null);
+  await selectWord(S1, 'Every');
+  await fontMenu('Roboto');
+  out = await save();
+  check('Schriftart Roboto', step1Html(out).includes('<font face="Roboto">Every</font>'), step1Html(out).slice(0, 80));
+  check('die Schrift-Combo zeigt die gewählte Schrift', (await comboText('font')) === 'Roboto - Sans Serif');
+  await selectWord(S1, 'Every');
+  await fontMenu('Sitka');
+  out = await save();
+  check('Sitka entfernt face wieder', !step1Html(out).includes('face=') && step1Html(out).includes(' Every step'), step1Html(out).slice(0, 80));
+  await selectWord(S1, 'ID');
+  await page.click('button[title="Farbe..."]');
+  // der Farbwähler des Browsers lässt sich nicht bedienen: schließen und die Wahl nachstellen
+  await k.press('Escape');
+  await page.$eval('.app-color-input', (i) => {
+    i.value = '#ff0000';
+    i.dispatchEvent(new Event('change'));
+  });
+  out = await save();
+  check('Farbe schreibt <font color>', step1Html(out).includes('<font color="#ff0000">ID</font>'), step1Html(out).slice(0, 80));
+  await selectWord(S1, 'step');
+  await k.press('Control+b');
+  await settle();
+  check('Fett-Knopf zeigt den Zustand', await pressed('button[title="Fett (Strg+B)"]'));
+  // alles auswählen, Styles löschen
+  await page.evaluate((p) => {
+    const el = document.querySelector(`[data-path="${CSS.escape(p)}"]`);
+    getSelection().selectAllChildren(el);
+  }, S1);
+  await k.press('Control+Shift+Y');
+  out = await save();
+  check('Strg+Umschalt+Y löscht alle Zeichenformate', !/<(font|b)\b/.test(step1Html(out)) && step1(out).plain === step1(fixture(REF)).plain, step1Html(out).slice(0, 80));
+  await press('Control+z', 6);
+  check('Zeichenformate sind je ein Undo-Schritt', (await save()) === fixture(REF));
+
+  // Markierungen der Änderungsverfolgung überstehen Absatzformat und Styles löschen
+  await page.click('[data-name="toolbar.track.changes"]');
+  await caret(S1, 'end');
+  await k.type(' neu');
+  await paraMenu('Überschrift 3');
+  await page.evaluate((p) => getSelection().selectAllChildren(document.querySelector(`[data-path="${CSS.escape(p)}"]`)), S1);
+  await page.click('button[title="Styles löschen (Strg+Umschalt+Y)"]');
+  out = await save();
+  s1 = step1(out);
+  check('Änderungsmarkierung bleibt bei Absatzformat und Styles löschen', step1Html(out).startsWith('<h3>') && s1.plain.endsWith('before. neu') && /\(\d+,\d+,Changed,/.test(s1.markups), `${step1Html(out).slice(0, 10)} ${s1.markups}`);
+  await page.click('[data-name="toolbar.track.changes"]');
+
+  // leerer neuer Schritt: Überschrift und tippen
+  await open(REF);
+  await caret(S1, 'end');
+  await page.click('.app-palette-btn[title="Einfachen Schritt anlegen"]');
+  await page.evaluate(() => getSelection().selectAllChildren(getSelection().focusNode.parentElement.closest('[data-path]')));
+  await k.press('Delete');
+  await k.press('Alt+1');
+  await k.type('Neu');
+  out = await save();
+  check('leerer Schritt wird Überschrift, Tippen landet darin', /simple\(2, \w+, `<h1>\s*Neu\s*<\/h1>`, plain=`Neu`/.test(out), (/simple\(2, [^\n]*/.exec(out) || [''])[0]);
+
   check('keine Dialoge unerwartet', dialogs.length === 0, JSON.stringify(dialogs));
   check('keine Fehler im Browser', errors.length === 0, errors.join('\n'));
   await browser.close();

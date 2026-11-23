@@ -155,7 +155,7 @@ export function cleanHtml(el: HTMLElement): string {
   }
   for (const e of Array.from(root.querySelectorAll('*'))) normalizeElement(e as HTMLElement);
   // vom Sanitizer eingefügt: <br> in leeren Absätzen
-  for (const br of Array.from(root.querySelectorAll('div > br:only-child, p > br:only-child'))) {
+  for (const br of Array.from(root.querySelectorAll(EMPTY_BLOCKS.split(', ').map((b) => `${b} > br:only-child`).join(', ')))) {
     if (br.parentElement!.textContent === '') br.remove();
   }
   // leere Formatierungs-Hüllen, z. B. nach dem Teilen am Textende
@@ -166,7 +166,18 @@ export function cleanHtml(el: HTMLElement): string {
   return root.innerHTML;
 }
 
+/** Blöcke, die leer ein <br> brauchen, um eine Zeile zu belegen (Sanitizer und Absatzformat setzen es) */
+export const EMPTY_BLOCKS = 'div, p, h1, h2, h3, h4, h5, h6, pre, blockquote';
+
 function normalizeElement(e: HTMLElement): void {
+  // Sitka ist die Standardschrift, im Text steht sie nie (FontChangeHandler entfernt face)
+  if (e.tagName === 'FONT' && e.getAttribute('face') === 'SitkaDisplay') {
+    e.removeAttribute('face');
+    if (e.attributes.length === 0) {
+      e.replaceWith(...Array.from(e.childNodes));
+      return;
+    }
+  }
   // vom Sanitizer gesetzt (Links öffnen in neuem Tab)
   if (e.tagName === 'A') {
     e.removeAttribute('target');

@@ -91,6 +91,23 @@ Bisher portiert: fett, kursiv, unterstrichen, Listen. Im Original stehen außerd
 Alles bleibt auf das HTML beschränkt, das Swing schreibt und liest. Neue Tags und Attribute daher mit dem Writer und einem
 Roundtrip prüfen.
 
+**Umgesetzt (3.5):** `ui/textformat.ts`, Übernahme ins Modell über `applyFormat` in `ui/textinput.ts` (ein Undo-Schritt
+je Formatierung). Die Gruppe Text folgt der Reihenfolge von `createToolbarComponents`: Absatzformat (Combo, 120 px),
+Schriftart (Combo, 150 px), Schriftgröße (Knopf mit Menü), Farbe..., fett, kursiv, unterstrichen, die vier
+Ausrichtungen, dazu Styles löschen. Die Listen stehen jetzt wie im Original vorn in der Gruppe Einfügen. Die
+SHEF-Aktionen liegen nur kompiliert vor; sie wurden mit CFR dekompiliert und zusätzlich auf einem kopflosen JEditorPane
+ausgeführt (`scripts/swing-oracle/oracle.sh`). Daraus: Absatzformat setzt das Tag je berührtem Absatz und behält
+dessen Attribute, Text ohne Block wird eingepackt, Vorformatiert fasst den Leerraum zusammen. Ausrichtung setzt
+`align` am Absatz, Text direkt im Body bleibt dabei unverändert (Swings `p-implied` unter `body`). Schriftgröße
+„Mittel“ schreibt `<font size="4">` (Eintrag i ergibt size i+1), Sitka entfernt `face`. Styles löschen
+(Strg+Umschalt+Y) entfernt alle Zeichenformate einschließlich Links. Für fontName, fontSize und foreColor
+erzeugt Chromes `execCommand` dasselbe HTML wie Swing. formatBlock, justify* und removeFormat passen nicht (CSS statt
+`align`, Attribute gehen verloren, Links bleiben), sie sind selbst geschrieben. Tastenkürzel wie im Menü Format:
+Alt+D, Alt+Enter, Alt+1–6, Alt+R, Alt+Q. Die Absatz-Combo und die Knöpfe für Ausrichtung, fett, kursiv und
+unterstrichen folgen der Schreibmarke, das Größenmenü markiert die Größe an der Schreibmarke. Die Schrift-Combo
+zeigt wie im Original die zuletzt gewählte Schrift. Nicht Teil von 3.5: das Menü Format (Schrift-Dialog, Stil-Untermenü,
+Tabellen-Menü), weil Specman Web keine Menüleiste hat.
+
 ### 3.6 Einfüge-Werkzeuge (SHEF Insert-Gruppe)
 
 Bisher portiert: Bild, Tabelle. Im Original stehen außerdem:

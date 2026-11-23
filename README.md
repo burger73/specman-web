@@ -71,6 +71,12 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Ä
 - Schrittverweise: Strg+Klick folgt dem Verweis unter dem Mauszeiger; das Original prüft das Zeichen hinter der
   Schreibmarke, die der Klick gerade gesetzt hat. Wenn der Dialog den Verweis einfügt, rutscht die Schreibmarke aus
   einem bestehenden Verweis heraus hinter diesen, damit zwei Verweise nicht verschmelzen.
+- Text-Werkzeuge: Styles löschen steht als Knopf in der Toolbar (im Original nur im Menü Format, das es hier nicht
+  gibt). Es lässt Änderungsmarkierungen und Streichungen der Änderungsverfolgung stehen, im Original gehen sie
+  verloren. Ohne Auswahl tut es nichts (das Original setzt den Stil für das Weitertippen zurück). Die beiden
+  Listeneinträge der Absatz-Combo heißen „Listeneintrag (Aufzählung)“ und „(nummeriert)“, im Original beide
+  „Listeneintrag“. Farbe wählt der Farbwähler des Browsers statt `JColorChooser`. Die Combos sind Knöpfe mit Menü, damit
+  auch die erneute Wahl desselben Eintrags wirkt (wie bei `JComboBox`).
 - Reader: Die Zusatz-Areas eines Listenpunkts behalten ihre Reihenfolge (Java sortiert nach Text/Tabelle/Bild).
 - Writer: schreibt standardmäßig Version 1.4.0 ins Envelope, beim Roundtrip die Version der gelesenen Datei.
 - Nicht in Phase 0: Bearbeiten, PDF-Export, PlantUML-Rendering (Platzhalter mit Quelltext), JSON-Format v1.

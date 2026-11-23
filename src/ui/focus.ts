@@ -40,10 +40,27 @@ export function restoreFocus(root: HTMLElement, focus: Focus): boolean {
   el.focus({ preventScroll: true });
   const sel = document.getSelection();
   if (!sel) return true;
+  const range = rangeAt(el, focus.offset);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+  el.scrollIntoView({ block: 'nearest' });
+  return true;
+}
+
+/** Fokus in die erste Text-Area eines Schritts (nach dem Einfügen) */
+export function focusStep(root: HTMLElement, stepId: string): boolean {
+  const el = root.querySelector<HTMLElement>(`[data-step-id="${CSS.escape(stepId)}"] [data-path]`);
+  if (!el) return false;
+  return restoreFocus(root, { path: el.dataset.path!, offset: 0 });
+}
+
+/** Leerer Range an der Klartext-Position offset der Area (ohne offset: am Ende) */
+export function rangeAt(el: HTMLElement, offset: number | undefined): Range {
   const range = document.createRange();
   const plain = plainAndMarkups(el).plainText;
   const positions = mapPlainToDom(el, plain);
-  const offset = focus.offset ?? plain.length;
+  offset ??= plain.length;
   // Schreibmarke vor das Zeichen an offset, bei Leerraum ohne Gegenstück vor das nächste vorhandene
   let pos = undefined;
   for (let i = offset; i < plain.length && !pos; i++) pos = positions[i];
@@ -59,15 +76,5 @@ export function restoreFocus(root: HTMLElement, focus: Focus): boolean {
     }
   }
   range.collapse(true);
-  sel.removeAllRanges();
-  sel.addRange(range);
-  el.scrollIntoView({ block: 'nearest' });
-  return true;
-}
-
-/** Fokus in die erste Text-Area eines Schritts (nach dem Einfügen) */
-export function focusStep(root: HTMLElement, stepId: string): boolean {
-  const el = root.querySelector<HTMLElement>(`[data-step-id="${CSS.escape(stepId)}"] [data-path]`);
-  if (!el) return false;
-  return restoreFocus(root, { path: el.dataset.path!, offset: 0 });
+  return range;
 }

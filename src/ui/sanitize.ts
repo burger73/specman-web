@@ -1,6 +1,8 @@
 // HTML aus Modelldateien in DOM überführen. Skripte und Event-Handler werden entfernt,
 // weil Dateien von anderen stammen können. Leere Absätze bekommen ein <br>, damit sie wie in Swing eine Zeile belegen.
 
+import { EMPTY_BLOCKS } from './textedit.ts';
+
 const DROP = new Set(['SCRIPT', 'IFRAME', 'OBJECT', 'EMBED', 'STYLE', 'LINK', 'META', 'BASE', 'FORM']);
 
 export function sanitizeHtml(html: string): DocumentFragment {
@@ -28,7 +30,7 @@ function clean(el: Element): void {
       child.setAttribute('target', '_blank');
       child.setAttribute('rel', 'noopener noreferrer');
     }
-    if ((child.tagName === 'DIV' || child.tagName === 'P') && child.children.length === 0 && child.textContent!.trim() === '') {
+    if (child.matches(EMPTY_BLOCKS) && child.children.length === 0 && child.textContent!.trim() === '') {
       child.textContent = '';
       child.append(document.createElement('br'));
     }
