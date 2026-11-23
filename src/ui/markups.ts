@@ -3,6 +3,7 @@
 // Der Plaintext stammt aus Swings HTMLDocument und unterscheidet sich vom DOM-Text nur in Leerraum.
 // Daher werden die Zeichen gierig einander zugeordnet, Leerraum darf auf beiden Seiten fehlen.
 import type { Markup } from '../core/model.ts';
+import { plainAndMarkups } from './textedit.ts';
 
 interface Pos {
   node: Text;
@@ -12,6 +13,7 @@ interface Pos {
 const isSpace = (c: string) => /\s/.test(c);
 
 export function applyMarkups(root: HTMLElement, plain: string, markups: Markup[], background: (m: Markup) => string): void {
+  markBreaks(root, plain, markups, background);
   const positions = mapPlainToDom(root, plain);
   // von hinten nach vorn, damit das Aufteilen der Textknoten frühere Positionen nicht verschiebt
   const sorted = markups.map((m, index) => ({ m, index })).sort((a, b) => b.m.from - a.m.from);
@@ -84,4 +86,37 @@ function wrap(start: Pos, end: Pos, color: string, m: Markup, index: number): vo
     target.replaceWith(s);
     s.append(target);
   }
+}
+
+const STRUCK = 'strike, s, del';
+
+/**
+ * Änderungs-Markups über Zeilenumbrüchen: Das Element nach der Grenze bekommt data-break (changed, oder deleted, wenn
+ * das Zeichen davor gestrichen ist) und data-break-cs. Der k-te Umbruch im Plaintext gehört zum k-ten im DOM.
+ */
+function markBreaks(root: HTMLElement, plain: string, markups: Markup[], background: (m: Markup) => string): void {
+  const changed = markups.filter((m) => m.type === 'Changed' && plain.substring(m.from, m.to + 1).includes('\n'));
+  if (changed.length === 0) return;
+  const owners = plainAndMarkups(root).breakOwners;
+  const newlines: number[] = [];
+  for (let i = 0; i < plain.length; i++) if (plain[i] === '\n') newlines.push(i);
+  if (newlines.length !== owners.length) return;
+  const positions = mapPlainToDom(root, plain);
+  for (const m of changed) {
+    for (let i = m.from; i <= m.to; i++) {
+      if (plain[i] !== '\n') continue;
+      const owner = owners[newlines.indexOf(i)];
+      if (!owner || !m.changeset) continue;
+      const before = positions[i - 1];
+      const struck = before !== undefined && before.node.parentElement?.closest(STRUCK) != null && root.contains(before.node.parentElement.closest(STRUCK));
+      setBreak(owner, struck ? 'deleted' : 'changed', m.changeset, background(m));
+    }
+  }
+}
+
+/** Absatzgrenze vor el als hinzugefügt oder gelöscht markieren; color ist die Farbe des Change Sets */
+export function setBreak(el: HTMLElement, kind: 'changed' | 'deleted', cs: string, color: string): void {
+  el.dataset.break = kind;
+  el.dataset.breakCs = cs;
+  el.style.setProperty('--sm-break-color', color);
 }

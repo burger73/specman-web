@@ -39,6 +39,14 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Ä
   von Texten (`EditContainer.aenderungenVerwerfen`) gibt es auch beim Übernehmen, sonst blieben Markierungen stehen.
 - Die erste Text-Area eines Inhalts wird beim Verwerfen nicht entfernt, sondern geleert. Ebenso bleibt sie beim
   Markieren als gelöscht stehen, auch wenn sie im selben Change Set hinzugefügt wurde (das Original entfernt sie).
+- Aufzeichnen im Text über `beforeinput` (Tippen, Einfügen, Löschen, Ausschneiden, Enter). Komposition (Tottasten,
+  IME, Android-Autokorrektur) lässt sich nicht abfangen, der fertige Text wird danach markiert, das klappt nicht immer.
+- Absatzgrenzen mit Änderung: Das Original färbt das Umbruchzeichen am Ende der vorigen Zeile, hier steht ein Balken
+  (hinzugefügt) bzw. ein gestrichenes ¶ (gelöscht) am Anfang des neuen Absatzes. Eine gelöschte Grenze bleibt nach
+  Speichern und Laden gelöscht (erkannt am gestrichenen Zeichen davor), im Original wird sie dabei zur hinzugefügten.
+- Die Textfassung fasst Leerraum-Folgen wie Swing zu einem Leerzeichen zusammen; das Markup des ersten Leerzeichens
+  gilt. Ohne Verfolgung landet Getipptes neben Änderungs-Markups und Schrittverweisen außerhalb davon
+  (standardStilSetzenWennNochNichtVorhanden).
 - Ob aufgezeichnet wird, steht im Diagramm (`changeModeEnabled`, `changeSetName`), die Operationen fragen es selbst ab.
 - Fehlermeldungen (z. B. „Der letzte Schritt kann nicht entfernt werden.“) erscheinen als Dialog, das Original
   gibt manche nur auf der Konsole aus (Sonst-Zweig, mindestens zwei Fälle).

@@ -106,6 +106,77 @@ function check(name, ok, detail = '') {
   out = await save();
   check('Undo nimmt das Markieren zurück', !out.includes('removed') && out.includes('change=(added, yellow)'));
 
+  // ---- 2.5 Aufzeichnen im Text ----
+  const textOf = (n) => `[data-path="mainSequence/steps/${n}/content/areas/0"]`;
+  await open('gutenmorgen.nsd');
+  await tool('toolbar.track.changes');
+  await page.click(textOf(0));
+  await k.press('End');
+  await k.type(' laut');
+  await k.press('Home');
+  await k.press('Shift+ArrowRight');
+  await k.press('Delete');
+  out = await save();
+  check('Tippen markiert, Löschen streicht', /`<strike>W<\/strike>[\s\S]*klingelt[\s\S]*laut[^`]*`, plain=`Wecker klingelt laut`, markups=\[\(0,0,Changed,yellow\)\(15,19,Changed,yellow\)\]/.test(out), out.split('\n').find((l) => l.includes('simple(1,')) + '\n' + out.split('\n').find((l) => l.includes('laut')));
+  await k.press('End');
+  await k.press('Backspace');
+  await k.press('Backspace');
+  out = await save();
+  check('eigenen Text löschen entfernt ihn', out.includes('plain=`Wecker klingelt la`'));
+  // Enter: neue Absatzgrenze ist hinzugefügt, Verwerfen nimmt sie samt Text zurück
+  await k.press('Enter');
+  await k.type('Zeile');
+  out = await save();
+  check('Enter markiert die Absatzgrenze', /plain=`Wecker klingelt la\nZeile`, markups=\[\(0,0,Changed,yellow\)\(15,\d+,Changed,yellow\)/.test(out), out.split('\n').filter((l) => l.includes('Zeile')).join('\n'));
+  await tool('toolbar.reject.changes');
+  out = await save();
+  check('Verwerfen stellt den Text her', out.includes('plain=`Wecker klingelt`') && !out.includes('Zeile') && !/simple\(1, [^;]*markups/.test(out));
+  // Backspace am Absatzanfang streicht die Grenze, Übernehmen verbindet die Absätze
+  await open('specman-reference-v1.4-model-v2.nsd');
+  await tool('toolbar.track.changes');
+  const intro = '[data-path="intro/areas/0"]';
+  await page.click(intro + ' div:nth-of-type(1)', { position: { x: 3, y: 8 } });
+  await k.press('Home');
+  await k.press('Backspace');
+  out = await save();
+  check('Backspace am Absatzanfang markiert die Grenze', /plain=`Specman Reference\nThis model[^`]*`, markups=\[\(17,17,Changed,yellow\)\]/.test(out), (out.match(/intro\([\s\S]*?\) \{/) ?? [''])[0]);
+  await tool('toolbar.accept.changes');
+  out = await save();
+  check('Übernehmen entfernt die gestrichene Grenze', /plain=`Specman Reference\s?This model/.test(out));
+  // Einfügen: als hinzugefügter Text, Zeilen werden zu hinzugefügten Umbrüchen
+  await open('gutenmorgen.nsd');
+  await tool('toolbar.track.changes');
+  await page.click(textOf(0));
+  await k.press('End');
+  await page.evaluate(() => {
+    const dt = new DataTransfer();
+    dt.setData('text/plain', 'A\nB');
+    document.activeElement.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  });
+  out = await save();
+  check('Einfügen ist hinzugefügt, auch der Umbruch', /plain=`Wecker klingeltA\nB`, markups=\[(\(15,17,Changed,yellow\)|\(15,15,Changed,yellow\)\(16,16,Changed,yellow\)\(17,17,Changed,yellow\))\]/.test(out), (out.match(/simple\(1, [\s\S]*?\);/) ?? [''])[0]);
+  // Schrittverweis: als Ganzes gestrichen
+  await open('specman-reference-v1.4-model-v2.nsd');
+  await tool('toolbar.track.changes');
+  const ref = textOf(3);
+  await page.click(ref, { position: { x: 5, y: 8 } });
+  await page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    const link = el.querySelector('.sm-markup-Steplink');
+    const r = document.createRange();
+    r.setStartAfter(link);
+    r.collapse(true);
+    getSelection().removeAllRanges();
+    getSelection().addRange(r);
+  }, ref);
+  await k.press('Backspace');
+  out = await save();
+  check('Schrittverweis wird als Ganzes gestrichen', out.includes('markups=[(47,47,ChangedSteplink,yellow)]') && /number <strike>1<\/strike>/.test(out), out.split('\n').filter((l) => l.includes('refering')).join('\n'));
+  await k.type('x');
+  out = await save();
+  // wie im Original steht der Cursor danach vor dem Verweis (linkStilStart)
+  check('Tippen danach landet vor dem Verweis, außerhalb', out.includes('markups=[(47,47,Changed,yellow)(48,48,ChangedSteplink,yellow)]'), out.split('\n').filter((l) => l.includes('refering')).join('\n'));
+
   check('keine Fehler im Browser', errors.length === 0, errors.join('\n'));
   await browser.close();
   process.exit(failures ? 1 : 0);

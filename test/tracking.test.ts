@@ -183,3 +183,40 @@ describe('Zusammenführen und Review', () => {
     expect(checked).toBeGreaterThan(0);
   });
 });
+
+describe('Absatzgrenzen im Text', () => {
+  const area = (text: string, plainText: string, markups: TextEditArea['markups']): TextEditArea => ({ kind: 'text', text, plainText, markups });
+
+  it('hinzugefügte Grenze: Verwerfen verbindet, Übernehmen behält', () => {
+    const r = area('<div>Erste</div><div>Zweite</div>', 'Erste\nZweite', [{ from: 5, to: 5, type: 'Changed', changeset: 'yellow' }]);
+    expect(domTextTracker.reject(r, 'yellow')).toBe(1);
+    expect(r.plainText).toBe('ErsteZweite');
+    expect(r.markups).toEqual([]);
+    const a = area('<div>Erste</div><div>Zweite</div>', 'Erste\nZweite', [{ from: 5, to: 5, type: 'Changed', changeset: 'yellow' }]);
+    domTextTracker.accept(a, 'yellow');
+    expect(a.plainText).toBe('Erste\nZweite');
+    expect(a.markups).toEqual([]);
+  });
+
+  it('gelöschte Grenze (Zeichen davor gestrichen): Übernehmen verbindet', () => {
+    const t = () => area('<div>Ers<strike>te</strike></div><div>Zweite</div>', 'Erste\nZweite', [
+      { from: 3, to: 4, type: 'Changed', changeset: 'blue' },
+      { from: 5, to: 5, type: 'Changed', changeset: 'blue' },
+    ]);
+    const a = t();
+    domTextTracker.accept(a, 'blue');
+    expect(a.plainText).toBe('ErsZweite');
+    const r = t();
+    domTextTracker.reject(r, 'blue');
+    expect(r.plainText).toBe('Erste\nZweite');
+    expect(r.text).not.toContain('strike');
+  });
+
+  it('Leerraum-Folgen werden wie in Swing ein Leerzeichen, das Markup des ersten zählt', () => {
+    const r = area('Alt <b>neu</b>  \n   Ende', 'Alt neu Ende', [{ from: 4, to: 7, type: 'Changed', changeset: 'pink' }]);
+    domTextTracker.accept(r, 'lilac');
+    expect(r.plainText).toBe('Alt neu Ende');
+    domTextTracker.reject(r, 'pink');
+    expect(r.plainText).toBe('Alt Ende');
+  });
+});

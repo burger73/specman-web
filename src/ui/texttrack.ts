@@ -5,7 +5,7 @@ import type { TextEditArea } from '../core/model.ts';
 import { markupChangeset, textChangedBy, type TextTracker } from '../core/tracking.ts';
 import { applyMarkups } from './markups.ts';
 import { sanitizeHtml } from './sanitize.ts';
-import { readTextArea } from './textedit.ts';
+import { BLOCKS, readTextArea } from './textedit.ts';
 
 const STRIKE = 'strike, s, del';
 
@@ -75,11 +75,44 @@ function resolve(area: TextEditArea, cs: string, mode: 'accept' | 'reject'): num
       delete s.dataset.changeset;
     } else s.replaceWith(...Array.from(s.childNodes));
   }
+  // markierte Absatzgrenzen: Gelöschte verschwinden beim Übernehmen, Hinzugefügte beim Verwerfen
+  for (const e of Array.from(root.querySelectorAll<HTMLElement>('[data-break]'))) {
+    if (e.dataset.breakCs !== cs) continue;
+    touched.add('break' + touched.size);
+    const remove = (mode === 'accept') === (e.dataset.break === 'deleted');
+    clearBreak(e);
+    if (remove) mergeBreak(e);
+  }
   const read = readTextArea(root);
   area.text = read.text;
   area.plainText = read.plainText;
   area.markups = read.markups;
   return touched.size;
+}
+
+export function clearBreak(e: HTMLElement): void {
+  delete e.dataset.break;
+  delete e.dataset.breakCs;
+  e.style.removeProperty('--sm-break-color');
+  if (e.getAttribute('style') === '') e.removeAttribute('style');
+}
+
+/** Absatzgrenze vor e entfernen: <br> fällt weg, ein Block wird an den vorigen angehängt bzw. ausgepackt */
+export function mergeBreak(e: HTMLElement): void {
+  if (e.tagName === 'BR') {
+    e.remove();
+    return;
+  }
+  let prev = e.previousSibling;
+  while (prev instanceof Text && prev.data.trim() === '') prev = prev.previousSibling;
+  // ein leerer Absatz besteht nur aus <br>, das beim Anhängen nicht mitwandert
+  const children = Array.from(e.childNodes).filter((n) => !(n instanceof HTMLElement && n.tagName === 'BR' && e.childNodes.length === 1));
+  if (prev instanceof HTMLElement && BLOCKS.has(prev.tagName)) {
+    const last = prev.lastChild;
+    if (last instanceof HTMLElement && last.tagName === 'BR' && prev.childNodes.length === 1) last.remove();
+    prev.append(...children);
+    e.remove();
+  } else e.replaceWith(...children);
 }
 
 export const domTextTracker: TextTracker = {

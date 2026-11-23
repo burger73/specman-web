@@ -201,3 +201,7 @@ body.app-drop .app-stage { outline: 3px dashed #3d5aa8; outline-offset: -8px; }
 .app-cs-item { display: flex; align-items: center; gap: 6px; padding: 4px 14px 4px 8px; border: none; font: 12px system-ui, sans-serif; text-align: left; cursor: pointer; }
 .app-cs-item:hover { background: var(--cs-hover) !important; }
 .app-btn.app-toggle-on { background: #d6dcf0; border-color: #8a9ad0; }
+/* markierte Absatzgrenze (Änderungsverfolgung). Swing färbt das Umbruchzeichen am Ende der vorigen Zeile ein, hier
+   steht ein schmaler Balken am Anfang des neuen Absatzes (davor muss kein Element stehen) */
+.sm-text [data-break]:not(br)::before { content: ''; display: inline-block; width: 4px; height: 1em; margin-right: 2px; vertical-align: text-bottom; background: var(--sm-break-color); }
+.sm-text [data-break='deleted']:not(br)::before { content: '¶'; width: auto; height: auto; padding: 0 1px; color: #666; text-decoration: line-through; font-size: 0.8em; }

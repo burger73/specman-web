@@ -3,7 +3,7 @@
 // Die Textfassung folgt Swings HTMLDocument: Absätze durch \n getrennt, Leerraum zusammengefasst.
 import type { Markup, MarkupType } from '../core/model.ts';
 
-const BLOCKS = new Set(['DIV', 'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'UL', 'OL', 'PRE', 'BLOCKQUOTE', 'TABLE', 'TR', 'CENTER']);
+export const BLOCKS = new Set(['DIV', 'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'UL', 'OL', 'PRE', 'BLOCKQUOTE', 'TABLE', 'TR', 'CENTER']);
 
 export interface TextAreaContent {
   text: string;
@@ -16,34 +16,66 @@ export function readTextArea(el: HTMLElement): TextAreaContent {
   return { text: cleanHtml(el), plainText, markups };
 }
 
-/** Textfassung und Markup-Bereiche (to inklusiv) in einem Durchlauf */
-export function plainAndMarkups(root: HTMLElement): { plainText: string; markups: Markup[] } {
+/** Absatzgrenze mit Änderungsmarkierung: Attribut am Element, das nach der Grenze beginnt (Block oder <br>) */
+export const BREAK_ATTR = 'break';
+
+/** Schlüssel einer markierten Absatzgrenze (data-break = changed | deleted, data-break-cs = Change Set) */
+function breakKey(el: HTMLElement, meta: Map<string, { type: MarkupType; changeset?: string }>): string | undefined {
+  const kind = el.dataset[BREAK_ATTR];
+  const cs = el.dataset.breakCs;
+  if (!kind || !cs) return undefined;
+  const key = `b:${kind}:${cs}`;
+  meta.set(key, { type: 'Changed', changeset: cs });
+  return key;
+}
+
+/**
+ * Textfassung und Markup-Bereiche (to inklusiv) in einem Durchlauf. Ein Markup ist ein zusammenhängender Lauf von
+ * Zeichen mit demselben Markup-Span (data-markup); zusammengefasster Leerraum zwischen zwei Zeichen desselben Laufs
+ * gehört dazu. Markierte Absatzgrenzen (siehe BREAK_ATTR) ergeben ein Changed-Markup über dem Zeilenumbruch, wie
+ * im Original, wo der Umbruch ein Zeichen mit Hintergrundfarbe ist.
+ * @returns zusätzlich je Zeilenumbruch der Fassung das Element, das ihn auslöst (Block-Anfang oder <br>), sonst null
+ */
+export function plainAndMarkups(root: HTMLElement): { plainText: string; markups: Markup[]; breakOwners: (HTMLElement | null)[] } {
   let out = '';
   let pendingSpace = false;
-  const ranges = new Map<string, { from: number; to: number; type: MarkupType; changeset?: string }>();
+  /** je Zeichen: Schlüssel des Markups, undefined ohne, null für zusammengefassten Leerraum (neutral) */
+  const keys: (string | null | undefined)[] = [];
+  const meta = new Map<string, { type: MarkupType; changeset?: string }>();
+  const owners: (HTMLElement | null)[] = [];
 
-  const newline = () => {
+  /** Markup des ersten Zeichens im gerade zusammengefassten Leerraum, null ohne (dann neutral) */
+  let pendingKey: string | null = null;
+  const keyOf = (markup: HTMLElement): string => {
+    const key = 'm:' + markup.dataset.markup!;
+    meta.set(key, { type: markup.dataset.type as MarkupType, changeset: markup.dataset.changeset });
+    return key;
+  };
+  const push = (c: string, key: string | null | undefined, owner: HTMLElement | null = null) => {
+    out += c;
+    keys.push(key);
+    if (c === '\n') owners.push(owner);
+  };
+  const newline = (owner: HTMLElement | null) => {
     pendingSpace = false;
-    if (out.length > 0 && !out.endsWith('\n')) out += '\n';
+    if (out.length > 0 && !out.endsWith('\n')) push('\n', undefined, owner);
   };
 
   const walk = (node: Node, markup: HTMLElement | undefined): void => {
     if (node instanceof Text) {
       const pre = node.parentElement?.closest('pre') != null;
-      for (const c of node.data) {
-        if (!pre && /\s/.test(c) && c !== ' ') {
+      for (const raw of node.data) {
+        // wie Swings HTMLDocument: Leerraum-Folgen werden ein Leerzeichen, geschützte Leerzeichen bleiben einzeln
+        if (!pre && /[ \t\n\r\f]/.test(raw)) {
+          // vom zusammengefassten Leerraum zählt das erste Zeichen (dessen Markup gilt)
+          if (!pendingSpace) pendingKey = markup ? keyOf(markup) : null;
           pendingSpace = true;
           continue;
         }
-        if (pendingSpace && out.length > 0 && !out.endsWith('\n')) out += ' ';
+        const c = raw === '\u00a0' ? ' ' : raw;
+        if (pendingSpace && out.length > 0 && !out.endsWith('\n')) push(' ', pendingKey);
         pendingSpace = false;
-        if (markup) {
-          const key = markup.dataset.markup!;
-          const r = ranges.get(key);
-          if (r) r.to = out.length;
-          else ranges.set(key, { from: out.length, to: out.length, type: markup.dataset.type as MarkupType, changeset: markup.dataset.changeset });
-        }
-        out += c;
+        push(c, markup ? keyOf(markup) : undefined);
       }
       return;
     }
@@ -51,33 +83,57 @@ export function plainAndMarkups(root: HTMLElement): { plainText: string; markups
     if (node.tagName === 'BR') {
       // ein <br> als einziger Inhalt eines Absatzes hält nur die Zeile offen
       if (node.parentElement && node.parentElement !== root && node.parentElement.childNodes.length === 1) return;
-      out += '\n';
+      push('\n', breakKey(node, meta), node);
       pendingSpace = false;
       return;
     }
     const block = BLOCKS.has(node.tagName);
-    if (block) newline();
+    if (block) {
+      newline(node);
+      // die Grenze vor dem Block gehört zum Block, auch wenn der Umbruch schon am Ende des vorigen entstand
+      const bk = breakKey(node, meta);
+      if (out.endsWith('\n')) {
+        if (bk) keys[out.length - 1] = bk;
+        owners[owners.length - 1] ??= node;
+      }
+    }
     // leerer Absatz (nur <br>) ergibt eine Leerzeile
     if (block && node.textContent === '' && node.querySelector('br')) {
-      out += '\n';
+      push('\n', undefined, node);
       return;
     }
     const m = node.classList.contains('sm-markup') ? node : markup;
     for (const child of Array.from(node.childNodes)) walk(child, m);
-    if (block) newline();
+    if (block) newline(null);
   };
 
   for (const child of Array.from(root.childNodes)) walk(child, undefined);
   const plainText = out.replace(/\n+$/, '');
-  const markups: Markup[] = [];
-  for (const r of ranges.values()) {
-    if (r.from >= plainText.length) continue;
-    const m: Markup = { from: r.from, to: Math.min(r.to, plainText.length - 1), type: r.type };
-    if (r.changeset !== undefined) m.changeset = r.changeset;
-    markups.push(m);
+  // neutraler Leerraum gehört zum Lauf, wenn davor und danach derselbe Schlüssel steht
+  for (let i = 0; i < keys.length; i++) {
+    if (keys[i] !== null) continue;
+    let a = i - 1;
+    while (a >= 0 && keys[a] === null) a--;
+    let b = i + 1;
+    while (b < keys.length && keys[b] === null) b++;
+    keys[i] = a >= 0 && b < keys.length && keys[a] !== undefined && keys[a] === keys[b] ? keys[a] : undefined;
   }
-  markups.sort((a, b) => a.from - b.from);
-  return { plainText, markups };
+  const markups: Markup[] = [];
+  for (let i = 0; i < plainText.length; ) {
+    const key = keys[i];
+    let j = i + 1;
+    while (j < plainText.length && keys[j] === key) j++;
+    if (key) {
+      const info = meta.get(key)!;
+      const m: Markup = { from: i, to: j - 1, type: info.type };
+      if (info.changeset !== undefined) m.changeset = info.changeset;
+      markups.push(m);
+    }
+    i = j;
+  }
+  // abgeschnittene Umbrüche am Ende haben keinen Besitzer mehr
+  owners.length = plainText.split('\n').length - 1;
+  return { plainText, markups, breakOwners: owners };
 }
 
 /**
@@ -90,6 +146,13 @@ const BROWSER_STYLE = /^(font-family|font-size|font-weight|font-style|line-heigh
 export function cleanHtml(el: HTMLElement): string {
   const root = el.cloneNode(true) as HTMLElement;
   for (const s of Array.from(root.querySelectorAll('span.sm-markup, span.sm-deleted-text'))) s.replaceWith(...Array.from(s.childNodes));
+  // markierte Absatzgrenzen stehen nur in den Markups, nicht im HTML
+  for (const e of Array.from(root.querySelectorAll<HTMLElement>('[data-break]'))) {
+    e.removeAttribute('data-break');
+    e.removeAttribute('data-break-cs');
+    e.style.removeProperty('--sm-break-color');
+    if (e.getAttribute('style') === '') e.removeAttribute('style');
+  }
   for (const e of Array.from(root.querySelectorAll('*'))) normalizeElement(e as HTMLElement);
   // vom Sanitizer eingefügt: <br> in leeren Absätzen
   for (const br of Array.from(root.querySelectorAll('div > br:only-child, p > br:only-child'))) {
