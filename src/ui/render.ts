@@ -27,6 +27,7 @@ import type {
   WhileStep,
 } from '../core/model.ts';
 import { childSequences } from '../core/model.ts';
+import { indexPaths } from '../core/paths.ts';
 import { applyMarkups } from './markups.ts';
 import { sanitizeHtml } from './sanitize.ts';
 
@@ -38,8 +39,18 @@ const RAUTE = 20;
 /** Schritt-ID → Schrittnummer, für die Nummern an catch und coCatch */
 let stepNumbers = new Map<string, string>();
 let tagConfigs = new Map<string, MetaTagConfig>();
+/** Modellobjekt → Pfad (paths.ts), damit Edit-Areas nach dem Neuzeichnen wiedergefunden werden */
+let paths = new Map<object, string>();
 
-export function renderDiagram(d: Diagram): HTMLElement {
+export interface RenderOptions {
+  /** Klapp-Knopf eines strukturierten Schritts; ohne Handler klappt nur die Darstellung */
+  onToggle?: (stepId: string) => void;
+}
+let options: RenderOptions = {};
+
+export function renderDiagram(d: Diagram, opts: RenderOptions = {}): HTMLElement {
+  options = opts;
+  paths = indexPaths(d);
   stepNumbers = new Map(queryAllSteps(d).map((s) => [s.id, s.stepNumber]));
   tagConfigs = new Map(d.metaTagConfigs.map((c) => [c.name, c]));
   const sheet = div('sm-sheet');
@@ -349,6 +360,8 @@ function renderArea(area: Exclude<EditArea, { kind: 'listItem' }>): HTMLElement 
 
 function renderText(area: TextEditArea): HTMLElement {
   const el = div('sm-text');
+  const path = paths.get(area);
+  if (path !== undefined) el.dataset.path = path;
   el.append(sanitizeHtml(area.text));
   if (area.markups.length > 0) applyMarkups(el, area.plainText, area.markups, markupBackground);
   return el;
@@ -514,7 +527,8 @@ function addToggle(stepEl: HTMLElement, headCell: HTMLElement, step: Step & { co
   }
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
-    stepEl.classList.toggle('sm-collapsed');
+    if (options.onToggle) options.onToggle(step.id);
+    else stepEl.classList.toggle('sm-collapsed');
   });
   const meta = headCell.querySelector(':scope > .sm-meta');
   if (meta) meta.prepend(btn);

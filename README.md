@@ -1,7 +1,7 @@
 # Specman Web
 
 Portierung von [Specman](https://github.com/j-specman/specman) (Java/Swing-Editor für Use-Case-Abläufe als
-Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 0, nur lesend.
+Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten) in Arbeit, siehe `PLAN-phase1.md`.
 
 ## Befehle
 
@@ -13,12 +13,18 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 0, nur lesend.
 ## Aufbau
 
 - `src/core` – ohne DOM: generierter Parser, Modell (`model.ts`, entspricht `specman.model.v002`),
-  Reader (`ModelParser_V002`), Writer (`ModelSerializer_V002`), Change-Set-Farben
+  Reader (`ModelParser_V002`), Writer (`ModelSerializer_V002`), Change-Set-Farben, Edit-Kern mit Undo/Redo
+  (`editor.ts`), Schrittnummern (`numbering.ts`), Pfade zu Areas (`paths.ts`)
 - `src/ui` – Darstellung nach den Swing-Views, Markups, HTML-Bereinigung
 - `test/fixtures` – die V2-Beispieldateien aus dem Original-Repo
 
 ## Bewusste Abweichungen vom Original
 
+- Bearbeiten: Das Modell ist die Wahrheit. Jede Operation ändert das TS-Modell, danach wird neu gezeichnet. Im
+  Original halten die Swing-Views den Zustand und das Modell entsteht erst beim Speichern. Die Bedienung folgt
+  trotzdem dem Original.
+- Undo/Redo über Schnappschüsse des ganzen Diagramms statt über die Undoable*-Klassen. Auf- und Zuklappen ist wie
+  im Original kein Undo-Schritt und bleibt bei Undo/Redo erhalten.
 - Reader: Die Zusatz-Areas eines Listenpunkts behalten ihre Reihenfolge (Java sortiert nach Text/Tabelle/Bild).
 - Writer: schreibt standardmäßig Version 1.4.0 ins Envelope, beim Roundtrip die Version der gelesenen Datei.
 - Nicht in Phase 0: Bearbeiten, PDF-Export, PlantUML-Rendering (Platzhalter mit Quelltext), JSON-Format v1.
