@@ -173,8 +173,14 @@ body.app-drop .app-stage { outline: 3px dashed #3d5aa8; outline-offset: -8px; }
 /* Ziehgriff am rechten Rand (neu, nicht im Original) */
 .app-palette-grip { position: absolute; top: 0; right: -4px; bottom: 0; width: 7px; cursor: col-resize; z-index: 5; touch-action: none; }
 .app-palette-grip:hover { background: rgba(61, 90, 168, 0.25); }
-body.app-col-resize, body.app-col-resize * { cursor: col-resize !important; user-select: none; }
+body.app-col-resize, body.app-col-resize * { cursor: url('/cursors/left-right-cursor.png') 20 8, col-resize !important; user-select: none; }
 .app-palette-btn:hover { background: #eef; border-color: #ccd; }
+
+/* ---- Spaltenbreiten ziehen (SpaltenResizer): Griffe mittig auf der Linie, gestrichelte Linie beim Ziehen ---- */
+.sm-editable .sm-frame, .sm-editable .sm-structured, .sm-editable .sm-catch-columns { position: relative; }
+.sm-resizer { position: absolute; top: 0; bottom: 0; right: calc(-1 * var(--sm-lw) / 2 - 3px); width: 6px; z-index: 2; cursor: url('/cursors/left-right-cursor.png') 20 8, col-resize; touch-action: none; }
+.sm-dragline { position: fixed; top: 0; bottom: 0; width: 1px; pointer-events: none; z-index: 50; background: repeating-linear-gradient(to bottom, #000 0 10px, transparent 10px 20px); }
+.sm-table-wrap[data-table-op='resizeColumn'], .sm-table-wrap[data-table-op='resizeTable'] { cursor: url('/cursors/left-right-cursor.png') 20 8, col-resize; }
 
 /* ---- Tabellen bearbeiten (TableEditArea: Rand BORDER_THICKNESS 7 für die Auswahl) ---- */
 .sm-editable .sm-table-wrap { position: relative; margin: 0; padding: 7px 0 7px 7px; }

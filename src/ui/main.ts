@@ -4,6 +4,7 @@ import { readDiagram } from '../core/reader.ts';
 import { writeDiagram } from '../core/writer.ts';
 import { droppedFile, pickFile, saveFile, type OpenedFile } from './files.ts';
 import { currentFocus, restoreFocus } from './focus.ts';
+import { installColumnResizing } from './colresize.ts';
 import { createPalette, deleteFocusedStep, toggleBorderOfFocusedStep, toneFocusedStep, type PaletteHost } from './palette.ts';
 import { setAllCollapsed } from '../core/steps.ts';
 import { renderDiagram } from './render.ts';
@@ -230,6 +231,7 @@ const textHost: TextInputHost & PaletteHost = {
 };
 installTextInput(stage, textHost);
 installTableEditing(stage, textHost);
+installColumnResizing(stage, textHost);
 installImageEditing(stage, textHost);
 body.append(createPalette(textHost), stage);
 

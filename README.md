@@ -12,6 +12,7 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Ä
     node scripts/e2e-edit.cjs   # Browser-Prüfungen fürs Bearbeiten gegen den laufenden Dev-Server
     node scripts/e2e-changes.cjs   # Browser-Prüfungen der Änderungsverfolgung
     node scripts/e2e-phase3.cjs   # Browser-Prüfungen der Phase 3
+    node scripts/shot-resizers.cjs <beispiel.nsd> <out.png>   # Screenshot mit sichtbaren Spalten-Ziehgriffen
 
 ## Aufbau
 
@@ -19,7 +20,7 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Ä
   Reader (`ModelParser_V002`), Writer (`ModelSerializer_V002`), Change-Set-Farben, Edit-Kern mit Undo/Redo
   (`editor.ts`), Schrittnummern (`numbering.ts`) und -verweise (`steplinks.ts`), Pfade zu Areas (`paths.ts`),
   Operationen auf Areas (`areas.ts`) und Schritten (`steps.ts`), Übernehmen/Verwerfen/Zusammenführen/Review
-  (`tracking.ts`), Aufzeichnen beim Anlegen und Löschen (`recording.ts`), Catch-Sequenzen (`catches.ts`). Die Text-Markups bearbeitet dabei `ui/texttrack.ts` über das DOM (Tests unter jsdom).
+  (`tracking.ts`), Aufzeichnen beim Anlegen und Löschen (`recording.ts`), Catch-Sequenzen (`catches.ts`), Spaltenbreiten (`columns.ts`). Die Text-Markups bearbeitet dabei `ui/texttrack.ts` über das DOM (Tests unter jsdom).
 - `src/ui` – Darstellung nach den Swing-Views, Markups, HTML-Bereinigung
 - `test/fixtures` – die V2-Beispieldateien aus dem Original-Repo
 
@@ -58,6 +59,11 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Ä
 - Schrittpalette: Neu und nicht im Original lässt sich die Breite am rechten Rand ziehen (36–300 px). Ist sie
   schmaler als die Beschriftungen, werden diese abgeschnitten, bis nur die Icons bleiben. Den Knopf zum Ein- und
   Ausblenden der Beschriftungen (`StepButtonBar.toggleShowText`) gibt es dafür nicht, die Breite wird nicht gemerkt.
+- Spaltenbreiten ziehen: Die Verschiebung zählt ab dem Punkt, an dem die Maus gedrückt wurde (im Original ab dem
+  linken Rand des 2px-Resizers). Schleifenbalken, leere If-Spalte und Diagrammbreite gehen nicht unter 0, If-Else-Anteile
+  bleiben zwischen 0 und 1 (das Original prüft das nicht). Die Ziehzone am rechten Tabellenrand liegt innerhalb der
+  Tabelle, weil der Tabellenbereich rechts keinen Rand hat. Da die Ansicht anders gezoomt sein kann als die Datei,
+  werden Bildschirmpixel auf Pixel beim gespeicherten Zoom umgerechnet; im Original sind beide immer gleich.
 - Reader: Die Zusatz-Areas eines Listenpunkts behalten ihre Reihenfolge (Java sortiert nach Text/Tabelle/Bild).
 - Writer: schreibt standardmäßig Version 1.4.0 ins Envelope, beim Roundtrip die Version der gelesenen Datei.
 - Nicht in Phase 0: Bearbeiten, PDF-Export, PlantUML-Rendering (Platzhalter mit Quelltext), JSON-Format v1.

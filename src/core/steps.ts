@@ -2,6 +2,7 @@
 // DeleteStepADBLOp und CaseSchrittView.neuenZweigHinzufuegen/zweigEntfernen. Bei eingeschalteter Verfolgung werden
 // neue Schritte als hinzugefügt angelegt und Löschen markiert nur (recording.ts).
 // Nach jeder Operation werden die Schritte neu nummeriert und die Schrittverweise im Text nachgezogen.
+import { groesseUmrechnen } from './columns.ts';
 import type { Focus } from './editor.ts';
 import { EditException } from './editor.ts';
 import { content } from './factory.ts';
@@ -140,6 +141,9 @@ export function insertStep(d: Diagram, kind: NewStepKind, afterStepId: string | 
     const loc = afterStepId !== undefined ? locateStep(d, afterStepId) : undefined;
     const seq = loc?.seq ?? d.mainSequence;
     const step = createStep(kind, seq.steps.length + 1);
+    // Specman.newStepPostInit: DiagramScaler.scale(newStep, zoomFaktor, 100), Pixelwerte gelten beim gespeicherten Zoom
+    if ('barWidth' in step) step.barWidth = groesseUmrechnen(step.barWidth, d.zoomFactor, 100);
+    if ('emptyWidth' in step) step.emptyWidth = groesseUmrechnen(step.emptyWidth, d.zoomFactor, 100);
     const cs = trackingSet(d);
     if (cs) markStepAdded(step, cs);
     const existing = stepNumbersById(d);

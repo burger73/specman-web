@@ -37,6 +37,13 @@ Im Original lassen sich alle Trennlinien zwischen Spalten mit der Maus verschieb
 
 Grenzen und Rundung je Element nach dem Java-Code (Mindestbreiten, Prozent vs. Pixel beim gespeicherten Zoom).
 
+**Umgesetzt (3.2):** alle oben genannten Grenzen, dazu zwei weitere `SpaltenResizer` des Originals, die im Plan noch
+fehlten: die Diagrammbreite (rechter Rand der Hauptsequenz, `Specman.breitenAnpasser`) und die Gesamtbreite einer
+Tabelle (rechter Tabellenrand, `tableWidthPercent`). Beim Ziehen steht wie im Original eine gestrichelte Linie,
+übernommen wird beim Loslassen, Escape bricht ab. Nebenbei korrigiert: Pixelwerte (Balken, If-Spalte,
+Co-Catch-Balken) wurden bisher ohne Umrechnung vom gespeicherten Zoom gezeichnet, und neue Schleifen/If-Schritte
+bekommen ihre Pixelwerte jetzt wie in `Specman.newStepPostInit` beim gespeicherten Zoom.
+
 ### 3.3 Pfeiltasten zwischen den Textbereichen (`editarea/focusmover`)
 
 - Pfeil hoch/runter/links/rechts am Rand eines Texts springt in den benachbarten Textbereich (`EditAreaNeighbourFinder`,

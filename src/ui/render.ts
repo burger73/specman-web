@@ -27,6 +27,7 @@ import type {
   WhileStep,
 } from '../core/model.ts';
 import { childSequences } from '../core/model.ts';
+import type { ResizeTarget } from '../core/columns.ts';
 import { indexPaths } from '../core/paths.ts';
 import { firstChangeInSequence } from '../core/tracking.ts';
 import { applyMarkups } from './markups.ts';
@@ -43,6 +44,9 @@ let stepNumbers = new Map<string, string>();
 let tagConfigs = new Map<string, MetaTagConfig>();
 /** Modellobjekt → Pfad (paths.ts), damit Edit-Areas nach dem Neuzeichnen wiedergefunden werden */
 let paths = new Map<object, string>();
+/** Gespeicherter Zoom: Pixelwerte im Modell (Diagrammbreite, Balken, Spalten) gelten bei ihm, gezeichnet wird bei 100 % */
+let zoomFactor = 100;
+const px = (v: number) => `${(v * 100) / zoomFactor}px`;
 
 export interface RenderOptions {
   /** Klapp-Knopf eines strukturierten Schritts; ohne Handler klappt nur die Darstellung */
@@ -72,15 +76,17 @@ export function renderDiagram(d: Diagram, opts: RenderOptions = {}): HTMLElement
   paths = indexPaths(d);
   stepNumbers = new Map(queryAllSteps(d).map((s) => [s.id, s.stepNumber]));
   tagConfigs = new Map(d.metaTagConfigs.map((c) => [c.name, c]));
+  zoomFactor = d.zoomFactor || 100;
   const sheet = div('sm-sheet');
   if (opts.editable) sheet.classList.add('sm-editable');
   // width gilt im Original beim gespeicherten Zoom (Bildschirmpixel), umgerechnet auf 100 %
-  sheet.style.width = `${(d.width * 100) / (d.zoomFactor || 100)}px`;
+  sheet.style.width = px(d.width);
   const intro = introOutro(d, 'intro');
   if (intro) sheet.append(intro);
   if (d.mainSequence.steps.length > 0) {
     const frame = div('sm-frame');
     frame.append(renderSequence(d.mainSequence));
+    resizer(frame, { kind: 'diagram' });
     sheet.append(frame);
   } else sheet.append(welcome());
   const outro = introOutro(d, 'outro');
@@ -169,14 +175,16 @@ function renderStepInner(step: Step): HTMLElement {
 function renderLoop(step: WhileStep | DoWhileStep, seq: StepSequence, barWidth: number): HTMLElement {
   const kind = step.kind;
   const el = div(`sm-structured sm-loop sm-${kind}`);
-  el.style.gridTemplateColumns = `${barWidth}px 1fr`;
+  el.style.gridTemplateColumns = `${px(barWidth)} 1fr`;
   const text = renderContent(step.content, { step, cls: 'sm-cell sm-loop-text' });
-  text.style.paddingLeft = `${barWidth + 2 + 3}px`;
+  text.style.paddingLeft = `calc(${px(barWidth)} + 2px + 3px)`;
   const bar = div('sm-cell sm-loop-bar sm-body');
   const body = renderSequence(seq);
   body.classList.add('sm-body');
   if (kind === 'while') el.append(text, bar, body);
   else el.append(bar, body, text);
+  // SchleifenSchrittView: Resizer zwischen Balken und Schleifensequenz
+  resizer(el, { kind: 'loop', path: paths.get(step)! }, { column: 1, row: kind === 'while' ? 2 : 1, body: true });
   addToggle(el, text, step);
   return el;
 }
@@ -217,7 +225,7 @@ function heading(seq: BranchSequence, side: 'left' | 'right'): HTMLElement {
 
 function renderIfElse(step: IfElseStep): HTMLElement {
   const r = step.ifWidthRatio;
-  return branching(
+  const el = branching(
     step,
     [`minmax(10px, ${r}fr)`, `minmax(10px, ${1 - r}fr)`],
     renderContent(step.content, { step, cls: 'sm-cell' }),
@@ -225,18 +233,23 @@ function renderIfElse(step: IfElseStep): HTMLElement {
     [renderSequence(step.ifSequence), renderSequence(step.elseSequence)],
     'sm-ifelse',
   );
+  // IfElseSchrittView: Resizer über die ganze Höhe zwischen Ja- und Nein-Spalte
+  resizer(el, { kind: 'ifElse', path: paths.get(step)! }, { column: 1 });
+  return el;
 }
 
 /** Im Original bleibt die linke Spalte leer, rechts liegt der bedingte Zweig (siehe IfSchrittView) */
 function renderIf(step: IfStep): HTMLElement {
-  return branching(
+  const el = branching(
     step,
-    [`${step.emptyWidth}px`, 'minmax(10px, 1fr)'],
+    [px(step.emptyWidth), 'minmax(10px, 1fr)'],
     renderContent(step.content, { step, cls: 'sm-cell' }),
     [div('sm-cell sm-branch-heading'), heading(step.ifSequence, 'right')],
     [div('sm-cell sm-empty-branch'), renderSequence(step.ifSequence)],
     'sm-if',
   );
+  resizer(el, { kind: 'if', path: paths.get(step)! }, { column: 1 });
+  return el;
 }
 
 function renderCase(step: CaseStep): HTMLElement {
@@ -245,7 +258,7 @@ function renderCase(step: CaseStep): HTMLElement {
   // auf Summe 1 normieren: fr-Anteile unter 1 füllen in CSS nicht die ganze Breite
   const sum = raw.reduce((a, b) => a + b, 0) || 1;
   const ratios = raw.map((r) => r / sum);
-  return branching(
+  const el = branching(
     step,
     ratios.map((r) => `minmax(10px, ${r}fr)`),
     renderContent(step.content, { step, cls: 'sm-cell' }),
@@ -253,6 +266,9 @@ function renderCase(step: CaseStep): HTMLElement {
     seqs.map(renderSequence),
     'sm-case',
   );
+  // CaseSchrittView.spaltenResizerAnlegen: neben den Zweigen (nicht neben den Überschriften), zugeklappt unsichtbar
+  for (let i = 0; i < seqs.length - 1; i++) resizer(el, { kind: 'case', path: paths.get(step)!, column: i }, { column: i + 1, row: 3, body: true });
+  return el;
 }
 
 // ---- Catch-Bereich ----
@@ -264,6 +280,7 @@ function renderCatchArea(area: CatchArea): HTMLElement {
   columns.style.gridTemplateColumns =
     widths && widths.length === area.catchSequences.length ? widths.map((w) => `minmax(10px, ${w}fr)`).join(' ') : `repeat(${area.catchSequences.length}, minmax(10px, 1fr))`;
   for (const c of area.catchSequences) columns.append(renderCatchSequence(c));
+  for (let i = 0; i < area.catchSequences.length - 1; i++) resizer(columns, { kind: 'catchColumns', path: paths.get(area)!, column: i }, { column: i + 1 });
   columns.classList.add('sm-body');
   el.append(div('sm-divider'), columns, div('sm-divider sm-body'));
   if (area.collapsed) el.classList.add('sm-collapsed');
@@ -279,7 +296,9 @@ function renderCatchSequence(c: CatchSequence): HTMLElement {
   for (const cc of c.coCatches) {
     const co = withDeleted(cc.changeInfo, () => renderContent(cc.heading, { number: stepNumbers.get(cc.breakStepId) ?? '?', cls: 'sm-cell sm-catch-heading sm-cocatch' }));
     co.prepend(chevron('right'));
-    co.style.marginRight = `${c.headingRightBarWidth}px`;
+    co.style.marginRight = px(c.headingRightBarWidth);
+    // CatchSchrittSequenzView: Resizer links vom Balken neben den Co-Catch-Überschriften
+    resizer(co, { kind: 'coCatchBar', path: paths.get(c)! });
     if (cc.changeInfo) markWholeChange(co, cc.changeInfo.changetype, cc.changeInfo.changeset);
     el.append(co);
   }
@@ -600,4 +619,24 @@ function svgEl<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<strin
   const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
   for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
   return el;
+}
+
+// ---- Spaltenbreiten ziehen (SpaltenResizer), nur beim Bearbeiten ----
+
+/**
+ * Ziehgriff auf einer Spaltengrenze. In Grids liegt er absolut im Grid-Bereich der Spalte links der Grenze (nimmt
+ * an der Platzierung der anderen Zellen nicht teil), sonst am rechten Rand des Elternelements. colresize.ts liest
+ * das Ziel aus data-resize.
+ */
+function resizer(parent: HTMLElement, target: ResizeTarget, grid?: { column: number; row?: number; body?: boolean }): void {
+  if (!options.editable) return;
+  const r = div('sm-resizer');
+  r.dataset.resize = JSON.stringify(target);
+  if (grid) {
+    // bei absolut positionierten Grid-Kindern stünde ein fehlendes Ende für den Rand des Containers
+    r.style.gridColumn = `${grid.column} / ${grid.column + 1}`;
+    if (grid.row) r.style.gridRow = `${grid.row} / ${grid.row + 1}`;
+    if (grid.body) r.classList.add('sm-body');
+  }
+  parent.append(r);
 }

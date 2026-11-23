@@ -4,9 +4,10 @@
 import { addTableColumn, addTableRow, insertTable, paragraphBelow, removeOrMarkArea, removeTableColumn, removeTableRow } from '../core/areas.ts';
 import type { Focus } from '../core/editor.ts';
 import type { Diagram } from '../core/model.ts';
+import { resizeTableDrag, type ColumnResizeHost } from './colresize.ts';
 import { splitAtCaret } from './textsplit.ts';
 
-type Operation = 'addRow' | 'removeRow' | 'addColumn' | 'removeColumn' | 'removeTable' | 'paragraphBelow';
+type Operation = 'addRow' | 'removeRow' | 'addColumn' | 'removeColumn' | 'removeTable' | 'paragraphBelow' | 'resizeColumn' | 'resizeTable';
 
 interface Selection {
   op: Operation;
@@ -18,9 +19,12 @@ interface Selection {
 /** SELEECTION_GAP_SIZE = 4 * LINIENBREITE */
 const GAP = 8;
 
-export interface TableHost {
+export interface TableHost extends ColumnResizeHost {
   structural(op: (d: Diagram) => Focus | undefined): void;
 }
+
+/** Halbe Breite der Ziehzone auf Spaltengrenzen und am rechten Tabellenrand (SpaltenResizer) */
+const RESIZE_HALF = 3;
 
 export function installTableEditing(stage: HTMLElement, host: TableHost): void {
   let current: { wrap: HTMLElement; sel: Selection } | undefined;
@@ -39,6 +43,14 @@ export function installTableEditing(stage: HTMLElement, host: TableHost): void {
     if (!wrap || !table || wrap.closest('[contenteditable="false"]')) return clear();
     const sel = selectionAt(table, wrap, e.clientX, e.clientY);
     if (!sel) return clear();
+    if (sel.op === 'resizeColumn' || sel.op === 'resizeTable') {
+      // Ziehgriff: nur der Mauszeiger, keine Hervorhebung
+      if (current && current.wrap !== wrap) current.wrap.removeAttribute('data-table-op');
+      current = { wrap, sel };
+      wrap.dataset.tableOp = sel.op;
+      overlay.remove();
+      return;
+    }
     if (current && current.wrap !== wrap) current.wrap.removeAttribute('data-table-op');
     current = { wrap, sel };
     wrap.dataset.tableOp = sel.op;
@@ -62,6 +74,17 @@ export function installTableEditing(stage: HTMLElement, host: TableHost): void {
     e.preventDefault();
     const path = wrap.dataset.tablePath!;
     clear();
+    if (sel.op === 'resizeColumn' || sel.op === 'resizeTable') {
+      // TableEditArea: Resizer zwischen den Spalten bzw. am rechten Rand (WHOLETABLE_COLUMN_INDICATOR)
+      const table = wrap.querySelector<HTMLTableElement>(':scope > table')!;
+      const cells = Array.from(table.rows[0].cells).map((c) => c.getBoundingClientRect().width);
+      const w = wrap.getBoundingClientRect();
+      const zoom = w.width / wrap.offsetWidth || 1;
+      const available = (wrap.clientWidth - parseFloat(getComputedStyle(wrap).paddingLeft) - parseFloat(getComputedStyle(wrap).paddingRight)) * zoom;
+      if (sel.op === 'resizeColumn') resizeTableDrag(host, e, wrap, { kind: 'tableColumns', path, column: sel.index }, cells);
+      else resizeTableDrag(host, e, wrap, { kind: 'tableWidth', path }, [table.getBoundingClientRect().width, available]);
+      return;
+    }
     host.structural((d) => {
       switch (sel.op) {
         case 'addRow':
@@ -76,6 +99,8 @@ export function installTableEditing(stage: HTMLElement, host: TableHost): void {
           return removeOrMarkArea(d, path);
         case 'paragraphBelow':
           return paragraphBelow(d, path);
+        default:
+          return undefined;
       }
     });
   });
@@ -106,6 +131,12 @@ function selectionAt(table: HTMLTableElement, wrap: HTMLElement, x: number, y: n
   if (y < t.top) {
     const c = cols.findIndex((col) => x >= col.left && x < col.right);
     if (c >= 0) return { op: 'removeColumn', index: c, rect: strip(cols[c].left, t.top, cols[c].width, t.height) };
+  }
+  // Spaltengrenzen und rechter Rand: in der Höhe der Tabelle
+  if (y >= t.top && y < t.bottom) {
+    if (Math.abs(x - t.right) <= RESIZE_HALF) return { op: 'resizeTable', index: 0, rect: strip(t.right, t.top, 0, t.height) };
+    const inner = cols.slice(0, -1).findIndex((c) => Math.abs(x - c.right) <= RESIZE_HALF);
+    if (inner >= 0) return { op: 'resizeColumn', index: inner, rect: strip(cols[inner].right, t.top, 0, t.height) };
   }
   const w = wrap.getBoundingClientRect();
   if (y >= t.bottom && x >= t.left && x < t.right) return { op: 'paragraphBelow', index: 0, rect: strip(t.left, t.bottom, t.width, w.bottom - t.bottom) };
