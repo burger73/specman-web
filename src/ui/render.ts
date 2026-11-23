@@ -28,7 +28,9 @@ import type {
 } from '../core/model.ts';
 import { childSequences } from '../core/model.ts';
 import { indexPaths } from '../core/paths.ts';
+import { firstChangeInSequence } from '../core/tracking.ts';
 import { applyMarkups } from './markups.ts';
+import { domTextTracker } from './texttrack.ts';
 import { sanitizeHtml } from './sanitize.ts';
 
 /** AbstractSchrittView.TEXTEINRUECKUNG */
@@ -49,6 +51,21 @@ export interface RenderOptions {
   editable?: boolean;
 }
 let options: RenderOptions = {};
+/**
+ * Change Set, in dem das gerade gezeichnete Element gelöscht wurde. Gelöschter Text zeigt wie im Original den Stand
+ * vor den Änderungen dieses Sets (TextEditArea.setGeloeschtMarkiertStilUDBL), gespeichert wird der aktuelle.
+ */
+let deletedIn: string | undefined;
+
+function withDeleted<T>(ci: ChangeInfo | undefined, fn: () => T): T {
+  if (ci?.changetype !== 'Geloescht' || deletedIn !== undefined) return fn();
+  deletedIn = ci.changeset;
+  try {
+    return fn();
+  } finally {
+    deletedIn = undefined;
+  }
+}
 
 export function renderDiagram(d: Diagram, opts: RenderOptions = {}): HTMLElement {
   options = opts;
@@ -109,7 +126,7 @@ function renderSequence(seq: StepSequence): HTMLElement {
 // ---- Schritte ----
 
 function renderStep(step: Step, prevDecorated: boolean): HTMLElement {
-  const inner = renderStepInner(step);
+  const inner = withDeleted(step.changeInfo, () => renderStepInner(step));
   inner.dataset.stepId = step.id;
   inner.style.setProperty('--sm-bg', step.shade !== undefined ? '#' + step.shade.toString(16).padStart(6, '0') : '#fff');
   if (step.changeInfo) markStepChange(inner, step.changeInfo);
@@ -193,7 +210,7 @@ function branching(step: IfElseStep | IfStep | CaseStep, columns: string[], cond
 }
 
 function heading(seq: BranchSequence, side: 'left' | 'right'): HTMLElement {
-  const h = renderContent(seq.heading, { cls: `sm-cell sm-branch-heading sm-branch-${side}` });
+  const h = withDeleted(seq.changeInfo, () => renderContent(seq.heading, { cls: `sm-cell sm-branch-heading sm-branch-${side}` }));
   if (seq.changeInfo) markWholeChange(h, seq.changeInfo.changetype, seq.changeInfo.changeset);
   return h;
 }
@@ -255,12 +272,12 @@ function renderCatchArea(area: CatchArea): HTMLElement {
 
 function renderCatchSequence(c: CatchSequence): HTMLElement {
   const el = div('sm-catch');
-  const head = renderContent(c.heading, { number: stepNumbers.get(c.id) ?? '?', cls: 'sm-cell sm-catch-heading' });
+  const head = withDeleted(c.changeInfo, () => renderContent(c.heading, { number: stepNumbers.get(c.id) ?? '?', cls: 'sm-cell sm-catch-heading' }));
   head.prepend(chevron('right'));
   if (c.changeInfo) markWholeChange(head, c.changeInfo.changetype, c.changeInfo.changeset);
   el.append(head);
   for (const cc of c.coCatches) {
-    const co = renderContent(cc.heading, { number: stepNumbers.get(cc.breakStepId) ?? '?', cls: 'sm-cell sm-catch-heading sm-cocatch' });
+    const co = withDeleted(cc.changeInfo, () => renderContent(cc.heading, { number: stepNumbers.get(cc.breakStepId) ?? '?', cls: 'sm-cell sm-catch-heading sm-cocatch' }));
     co.prepend(chevron('right'));
     co.style.marginRight = `${c.headingRightBarWidth}px`;
     if (cc.changeInfo) markWholeChange(co, cc.changeInfo.changetype, cc.changeInfo.changeset);
@@ -359,7 +376,8 @@ function renderAreas(areas: EditArea[], into: HTMLElement): void {
       let a: EditArea;
       while (i < areas.length && (a = areas[i]).kind === 'listItem' && a.ordered === area.ordered) {
         const li = document.createElement('li');
-        renderAreas(a.content.areas, li);
+        const item = a;
+        withDeleted(item.changeInfo, () => renderAreas(item.content.areas, li));
         if (a.changeInfo) markWholeChange(li, a.changeInfo.changetype, a.changeInfo.changeset);
         list.append(li);
         i++;
@@ -373,26 +391,30 @@ function renderAreas(areas: EditArea[], into: HTMLElement): void {
 }
 
 function renderArea(area: Exclude<EditArea, { kind: 'listItem' }>): HTMLElement {
-  let el: HTMLElement;
-  switch (area.kind) {
-    case 'text':
-      el = renderText(area);
-      break;
-    case 'table':
-      el = renderTable(area);
-      break;
-    default:
-      el = renderImage(area);
-  }
+  const el = withDeleted(area.changeInfo, () => {
+    switch (area.kind) {
+      case 'text':
+        return renderText(area);
+      case 'table':
+        return renderTable(area);
+      default:
+        return renderImage(area);
+    }
+  });
   if (area.changeInfo) markWholeChange(el, area.changeInfo.changetype, area.changeInfo.changeset);
   return el;
 }
 
-function renderText(area: TextEditArea): HTMLElement {
+function renderText(model: TextEditArea): HTMLElement {
   const el = div('sm-text');
-  const path = paths.get(area);
+  const path = paths.get(model);
   if (path !== undefined) el.dataset.path = path;
   if (options.editable) el.contentEditable = 'true';
+  let area = model;
+  if (deletedIn !== undefined) {
+    area = structuredClone(model);
+    domTextTracker.reject(area, deletedIn);
+  }
   el.append(sanitizeHtml(area.text));
   if (area.markups.length > 0) applyMarkups(el, area.plainText, area.markups, markupBackground);
   return el;
@@ -514,45 +536,6 @@ function firstInnerChange(step: Step): string | undefined {
   for (const seq of childSequences(step)) {
     const cs = firstChangeInSequence(seq);
     if (cs) return cs;
-  }
-  return undefined;
-}
-
-function firstChangeInSequence(seq: StepSequence): string | undefined {
-  if (seq.changeInfo) return seq.changeInfo.changeset;
-  if ('heading' in seq) {
-    const cs = firstChangeInContent((seq as BranchSequence).heading);
-    if (cs) return cs;
-  }
-  for (const s of seq.steps) {
-    const cs = s.changeInfo?.changeset ?? firstChangeInContent(s.content) ?? firstInnerChange(s);
-    if (cs) return cs;
-  }
-  for (const c of seq.catchArea?.catchSequences ?? []) {
-    const cs = c.changeInfo?.changeset ?? firstChangeInContent(c.heading) ?? firstChangeInSequence(c);
-    if (cs) return cs;
-  }
-  return undefined;
-}
-
-function firstChangeInContent(ec: EditorContent): string | undefined {
-  for (const a of ec.areas) {
-    if (a.changeInfo) return a.changeInfo.changeset;
-    if (a.kind === 'text') {
-      const m = a.markups.find((m) => m.type !== 'Steplink');
-      if (m) return m.changeset ?? 'yellow';
-    }
-    if (a.kind === 'listItem') {
-      const cs = firstChangeInContent(a.content);
-      if (cs) return cs;
-    }
-    if (a.kind === 'table') {
-      for (const row of a.cells)
-        for (const cell of row) {
-          const cs = firstChangeInContent(cell);
-          if (cs) return cs;
-        }
-    }
   }
   return undefined;
 }

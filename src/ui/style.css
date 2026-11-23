@@ -193,3 +193,11 @@ body.app-drop .app-stage { outline: 3px dashed #3d5aa8; outline-offset: -8px; }
 .sm-image[data-image-path]:focus > img { outline: 2px solid #3d5aa8; outline-offset: 1px; }
 .sm-image-resizer { position: absolute; top: 0; right: -4px; width: 8px; height: 100%; cursor: ew-resize; }
 .sm-image-resizer:hover { background: rgba(61, 90, 168, 0.25); }
+
+/* ---- Änderungsverfolgung (Phase 2): ChangeSetButton, ChangeSetDotIcon, Toggle ---- */
+.app-cs-btn { white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 6px; border: 1px solid #bbb; border-radius: 4px; font: 12px system-ui, sans-serif; cursor: pointer; }
+.app-cs-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid #555; }
+.app-cs-popup { position: absolute; z-index: 20; display: flex; flex-direction: column; border: 1px solid #999; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); }
+.app-cs-item { display: flex; align-items: center; gap: 6px; padding: 4px 14px 4px 8px; border: none; font: 12px system-ui, sans-serif; text-align: left; cursor: pointer; }
+.app-cs-item:hover { background: var(--cs-hover) !important; }
+.app-btn.app-toggle-on { background: #d6dcf0; border-color: #8a9ad0; }

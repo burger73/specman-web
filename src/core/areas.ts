@@ -268,6 +268,12 @@ export function addTableColumn(d: Diagram, tablePath: string, colIndex: number):
 export function removeTableColumn(d: Diagram, tablePath: string, colIndex: number): Focus | undefined {
   const { area } = locateTable(d, tablePath);
   if (area.cells[0].length <= 1) return removeArea(d, tablePath);
+  dropTableColumn(area, colIndex);
+  return { path: cellPath(tablePath, 0, Math.min(colIndex, area.cells[0].length - 1)), offset: 0 };
+}
+
+/** TableEditArea.removeColumn: Spalte entfernen, ihre Breite geht an die folgende (bzw. vorige) Spalte */
+export function dropTableColumn(area: TableEditArea, colIndex: number): void {
   const p = area.columnsWidthPercent;
   if (p?.length) {
     const eater = colIndex === p.length - 1 ? colIndex - 1 : colIndex + 1;
@@ -275,7 +281,6 @@ export function removeTableColumn(d: Diagram, tablePath: string, colIndex: numbe
     p.splice(colIndex, 1);
   }
   for (const row of area.cells) row.splice(colIndex, 1);
-  return { path: cellPath(tablePath, 0, Math.min(colIndex, area.cells[0].length - 1)), offset: 0 };
 }
 
 /**
@@ -285,16 +290,27 @@ export function removeTableColumn(d: Diagram, tablePath: string, colIndex: numbe
 export function removeArea(d: Diagram, path: string): Focus | undefined {
   const { container, containerPath, index } = locateArea(d, path);
   if (index === 0) throw new EditException('Die erste Area eines Inhalts kann nicht entfernt werden.');
+  const offset = removeAreaAt(container, index);
+  if (offset !== undefined) return { path: areaPath(containerPath, index - 1), offset };
+  return lastTextFocus(d, areaPath(containerPath, index - 1));
+}
+
+/**
+ * Kern von removeEditAreaUDBL ohne Pfade (auch für Übernehmen/Verwerfen): Area an index (> 0) entfernen und
+ * zwei dann aufeinanderfolgende Texte zusammenführen.
+ * @returns Länge des vorangehenden Texts vor dem Zusammenführen, oder undefined ohne Zusammenführen
+ */
+export function removeAreaAt(container: EditorContent, index: number): number | undefined {
   container.areas.splice(index, 1);
   const prev = container.areas[index - 1];
   const next = container.areas[index];
-  if (prev.kind === 'text' && next?.kind === 'text') {
+  if (prev?.kind === 'text' && next?.kind === 'text') {
     const offset = prev.plainText.length;
     appendText(prev, asParagraph(next));
     container.areas.splice(index, 1);
-    return { path: areaPath(containerPath, index - 1), offset };
+    return offset;
   }
-  return lastTextFocus(d, areaPath(containerPath, index - 1));
+  return undefined;
 }
 
 /**

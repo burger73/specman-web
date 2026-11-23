@@ -7,6 +7,7 @@ import { currentFocus, restoreFocus } from './focus.ts';
 import { createPalette, deleteFocusedStep, toggleBorderOfFocusedStep, toneFocusedStep, type PaletteHost } from './palette.ts';
 import { setAllCollapsed } from '../core/steps.ts';
 import { renderDiagram } from './render.ts';
+import { createChangesGroup } from './changes.ts';
 import { insertTableDialog, installTableEditing } from './tableedit.ts';
 import { insertImageDialog, installImageEditing } from './imageedit.ts';
 import { format, installTextInput, toggleList, type TextInputHost } from './textinput.ts';
@@ -58,6 +59,8 @@ const expandAllBtn = button('material/unfold_more', 'Alle Schritte ausklappen', 
 const ulBtn = button('material/format_list_bulleted', 'Aufzählung', () => toggleList(textHost, false));
 const olBtn = button('material/format_list_numbered', 'Nummerierte Liste', () => toggleList(textHost, true));
 
+const changes = createChangesGroup({ editor: () => doc?.editor, button, structural: (op) => textHost.structural(op), redraw: () => redraw() });
+
 const select = document.createElement('select');
 select.title = 'Beispiele aus dem Original-Repo';
 const placeholder = document.createElement('option');
@@ -80,7 +83,7 @@ for (const z of ['Datei', '80', '100', '120', '150']) {
 }
 const status = document.createElement('span');
 status.className = 'app-status';
-bar.append(group(newBtn, openBtn, saveBtn, saveAsBtn), group(undoBtn, redoBtn), group(boldBtn, italicBtn, underlineBtn, ulBtn, olBtn), group(tableBtn, imageBtn), group(toneBtn, deleteBtn, borderBtn), group(collapseAllBtn, expandAllBtn), select, zoom, status);
+bar.append(group(newBtn, openBtn, saveBtn, saveAsBtn), group(undoBtn, redoBtn), group(boldBtn, italicBtn, underlineBtn, ulBtn, olBtn), group(tableBtn, imageBtn), group(toneBtn, deleteBtn, borderBtn), group(collapseAllBtn, expandAllBtn), changes.element, select, zoom, status);
 const stage = document.createElement('main');
 stage.className = 'app-stage';
 const body = document.createElement('div');
@@ -180,6 +183,7 @@ function updateBar(): void {
   undoBtn.disabled = !e?.canUndo;
   redoBtn.disabled = !e?.canRedo;
   saveBtn.disabled = saveAsBtn.disabled = !doc;
+  changes.update();
   if (!doc || !e) return;
   const mark = e.dirty ? '● ' : '';
   const version = doc.version ? ` – Specman ${doc.version}` : '';
