@@ -67,7 +67,7 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Ä
 - Pfeiltasten: Innerhalb eines Texts bewegt der Browser die Schreibmarke selbst. Nur nach einem Sprung aus einem
   anderen Bereich, solange die Spalte gemerkt ist, setzt Specman Web sie zeilenweise auf diese Spalte (in Swing gilt
   die magic caret position für jede Hoch/Runter-Bewegung). Strg+Alt+Links/Rechts (Blättern im Bearbeitungsverlauf)
-  fehlt noch.
+  ist bewusst nicht portiert: Das Original scrollt dabei nur, und viele Desktops belegen die Kombination selbst.
 - Reader: Die Zusatz-Areas eines Listenpunkts behalten ihre Reihenfolge (Java sortiert nach Text/Tabelle/Bild).
 - Writer: schreibt standardmäßig Version 1.4.0 ins Envelope, beim Roundtrip die Version der gelesenen Datei.
 - Nicht in Phase 0: Bearbeiten, PDF-Export, PlantUML-Rendering (Platzhalter mit Quelltext), JSON-Format v1.
