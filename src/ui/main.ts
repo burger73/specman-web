@@ -31,7 +31,7 @@ function button(icon: string, title: string, onClick: () => void): HTMLButtonEle
   b.className = 'app-btn';
   b.title = title;
   const img = document.createElement('img');
-  img.src = `/icons/${icon}.svg`;
+  img.src = `icons/${icon}.svg`;
   img.alt = title;
   b.append(img);
   b.addEventListener('mousedown', (e) => e.preventDefault()); // Fokus bleibt im Text

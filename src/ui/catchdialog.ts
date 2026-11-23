@@ -24,7 +24,7 @@ export function openCatchDialog(host: CatchHost): void {
   const header = document.createElement('div');
   header.className = 'app-dialog-header';
   const icon = document.createElement('img');
-  icon.src = '/icons/material/link.svg';
+  icon.src = 'icons/material/link.svg';
   icon.alt = '';
   const titles = document.createElement('div');
   const h = document.createElement('h3');
