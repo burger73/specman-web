@@ -1,10 +1,12 @@
 // Operationen auf den Edit-Areas eines EditorContents, Port der *UDBL-Methoden von EditContainer,
 // AbstractListItemEditArea und TextEditArea. Wo das Original am Cursor schneidet, liefert die UI die Teile
 // schon als fertige Text-Areas (HTML zerlegen kann nur das DOM), hier wird nur das Modell umgebaut.
+// Bei eingeschalteter Verfolgung (trackingSet) sind neue Areas hinzugefügt und Löschen markiert nur.
 import type { Focus } from './editor.ts';
 import { EditException } from './editor.ts';
 import type { Diagram, EditArea, EditorContent, ImageArea, ListItemEditArea, TableEditArea, TextEditArea } from './model.ts';
 import { resolvePath } from './paths.ts';
+import { added, markAreaAdded, markAreaDeleted, trackingSet } from './recording.ts';
 
 /** Lage einer Area: Inhalt, in dem sie steht, ihr Index und der Pfad des Inhalts */
 export interface AreaLocation {
@@ -58,6 +60,8 @@ export function appendText(target: TextEditArea, trailing: TextEditArea): void {
 export function addListItem(d: Diagram, path: string, ordered: boolean, leading: TextEditArea, caret: TextEditArea, trailing: TextEditArea | undefined): Focus {
   const { container, containerPath, index } = locateText(d, path);
   const item: ListItemEditArea = { kind: 'listItem', ordered, content: { areas: [caret] } };
+  const cs = trackingSet(d);
+  if (cs) markAreaAdded(item, cs);
   container.areas.splice(index, 1, leading, item, ...(trailing ? [trailing] : []));
   return { path: areaPath(`${areaPath(containerPath, index + 1)}/content`, 0), offset: 0 };
 }
@@ -117,6 +121,8 @@ export function splitListItem(d: Diagram, path: string, before: TextEditArea, af
   const moved = container.areas.splice(index + 1);
   container.areas[index] = before;
   const item: ListItemEditArea = { kind: 'listItem', ordered: li.item.ordered, content: { areas: [after, ...moved] } };
+  // createSplittedItem: der neue Punkt übernimmt die Änderungsart des geteilten
+  if (li.item.changeInfo) item.changeInfo = { ...li.item.changeInfo };
   const outer = locateArea(d, li.path);
   outer.container.areas.splice(outer.index + 1, 0, item);
   return { path: areaPath(`${areaPath(outer.containerPath, outer.index + 1)}/content`, 0), offset: 0 };
@@ -173,7 +179,26 @@ function lastTextFocus(d: Diagram, path: string): Focus | undefined {
 
 // ---- Tabellen (TableEditArea, ohne Änderungsverfolgung) ----
 
+/** Neuer leerer Text, bei eingeschalteter Verfolgung als hinzugefügt (TextInit.initialChangeInfo) */
+function newText(d: Diagram): TextEditArea {
+  const t: TextEditArea = { kind: 'text', text: '', plainText: '', markups: [] };
+  const cs = trackingSet(d);
+  if (cs) t.changeInfo = added(cs);
+  return t;
+}
+
 const emptyCell = (): EditorContent => ({ areas: [{ kind: 'text', text: '', plainText: '', markups: [] }] });
+const newCell = (d: Diagram): EditorContent => ({ areas: [newText(d)] });
+
+/** Alle Areas der Zelle tragen diese Änderung des Sets (EditContainer.isMarkedAs) */
+function cellMarkedAs(cell: EditorContent, changetype: 'Hinzugefuegt' | 'Geloescht', cs: string): boolean {
+  return cell.areas.every((a) => a.changeInfo?.changetype === changetype && a.changeInfo.changeset === cs);
+}
+
+/** EditContainer.setGeloeschtMarkiertStilUDBL für eine Zelle */
+function markCellDeleted(cell: EditorContent, cs: string): void {
+  for (const a of cell.areas) markAreaDeleted(a, cs);
+}
 
 function locateTable(d: Diagram, tablePath: string): AreaLocation & { area: TableEditArea } {
   const loc = locateArea(d, tablePath);
@@ -200,6 +225,8 @@ export function insertTable(d: Diagram, path: string, before: TextEditArea, afte
     cells: Array.from({ length: rows }, () => Array.from({ length: columns }, emptyCell)),
     tableWidthPercent: 100,
   };
+  const cs = trackingSet(d);
+  if (cs) markAreaAdded(table, cs);
   const tablePath = insertAtCaret(d, path, before, after, table);
   return { path: cellPath(tablePath, 0, 0), offset: 0 };
 }
@@ -213,6 +240,8 @@ function insertAtCaret(d: Diagram, path: string, before: TextEditArea, after: Te
 
 /** EditContainer.addImageAreaUDBL: Bild am Cursor einfügen, der Fokus bleibt im Text davor (an dessen Ende) */
 export function insertImage(d: Diagram, path: string, before: TextEditArea, after: TextEditArea | undefined, image: ImageArea): Focus {
+  const cs = trackingSet(d);
+  if (cs) markAreaAdded(image, cs);
   insertAtCaret(d, path, before, after, image);
   return { path };
 }
@@ -227,21 +256,26 @@ export function setImageScale(d: Diagram, path: string, scale: number): void {
 /** AbstractImageEditArea.appendTextEditAreaByKeypressUDBL / EditContainer.addTextEditAreaUDBL: leerer Text dahinter */
 export function addTextAfter(d: Diagram, path: string): Focus {
   const { container, containerPath, index } = locateArea(d, path);
-  container.areas.splice(index + 1, 0, { kind: 'text', text: '', plainText: '', markups: [] });
+  container.areas.splice(index + 1, 0, newText(d));
   return { path: areaPath(containerPath, index + 1), offset: 0 };
 }
 
 /** TableEditArea.addRowUDBL: leere Zeile an rowIndex */
 export function addTableRow(d: Diagram, tablePath: string, rowIndex: number): Focus {
   const { area } = locateTable(d, tablePath);
-  area.cells.splice(rowIndex, 0, area.cells[0].map(emptyCell));
+  area.cells.splice(rowIndex, 0, area.cells[0].map(() => newCell(d)));
   return { path: cellPath(tablePath, rowIndex, 0), offset: 0 };
 }
 
 /** TableEditArea.removeRowOrMarkAsDeletedUDBL: die letzte Zeile entfernt die ganze Tabelle */
 export function removeTableRow(d: Diagram, tablePath: string, rowIndex: number): Focus | undefined {
   const { area } = locateTable(d, tablePath);
-  if (area.cells.length <= 1) return removeArea(d, tablePath);
+  const cs = trackingSet(d);
+  if (cs && !area.cells[rowIndex].every((cell) => cellMarkedAs(cell, 'Hinzugefuegt', cs))) {
+    area.cells[rowIndex].forEach((cell) => markCellDeleted(cell, cs));
+    return { path: cellPath(tablePath, rowIndex, 0), offset: 0 };
+  }
+  if (area.cells.length <= 1) return removeOrMarkArea(d, tablePath);
   area.cells.splice(rowIndex, 1);
   return { path: cellPath(tablePath, Math.min(rowIndex, area.cells.length - 1), 0), offset: 0 };
 }
@@ -260,14 +294,19 @@ export function addTableColumn(d: Diagram, tablePath: string, colIndex: number):
     p[steal] = half;
     p.splice(colIndex, 0, half);
   }
-  for (const row of area.cells) row.splice(colIndex, 0, emptyCell());
+  for (const row of area.cells) row.splice(colIndex, 0, newCell(d));
   return { path: cellPath(tablePath, 0, colIndex), offset: 0 };
 }
 
 /** TableEditArea.removeColumnOrMarkAsDeletedUDBL: die Breite geht an die folgende (bzw. vorige) Spalte (releasePercent) */
 export function removeTableColumn(d: Diagram, tablePath: string, colIndex: number): Focus | undefined {
   const { area } = locateTable(d, tablePath);
-  if (area.cells[0].length <= 1) return removeArea(d, tablePath);
+  const cs = trackingSet(d);
+  if (cs && !area.cells.every((row) => cellMarkedAs(row[colIndex], 'Hinzugefuegt', cs))) {
+    area.cells.forEach((row) => markCellDeleted(row[colIndex], cs));
+    return { path: cellPath(tablePath, 0, colIndex), offset: 0 };
+  }
+  if (area.cells[0].length <= 1) return removeOrMarkArea(d, tablePath);
   dropTableColumn(area, colIndex);
   return { path: cellPath(tablePath, 0, Math.min(colIndex, area.cells[0].length - 1)), offset: 0 };
 }
@@ -296,6 +335,20 @@ export function removeArea(d: Diagram, path: string): Focus | undefined {
 }
 
 /**
+ * Tabelle oder Bild entfernen (removeTableOrMarkAsDeletedUDBL, AbstractImageEditArea.deleteUDBL). Bei eingeschalteter
+ * Verfolgung wird eine unverfolgte Area nur als gelöscht markiert, der Fokus bleibt.
+ */
+export function removeOrMarkArea(d: Diagram, path: string): Focus | undefined {
+  const cs = trackingSet(d);
+  const { area } = locateArea(d, path);
+  if (cs && !area.changeInfo) {
+    markAreaDeleted(area, cs);
+    return area.kind === 'table' ? { path: cellPath(path, 0, 0), offset: 0 } : undefined;
+  }
+  return removeArea(d, path);
+}
+
+/**
  * Kern von removeEditAreaUDBL ohne Pfade (auch für Übernehmen/Verwerfen): Area an index (> 0) entfernen und
  * zwei dann aufeinanderfolgende Texte zusammenführen.
  * @returns Länge des vorangehenden Texts vor dem Zusammenführen, oder undefined ohne Zusammenführen
@@ -319,7 +372,8 @@ export function removeAreaAt(container: EditorContent, index: number): number | 
  */
 export function paragraphBelow(d: Diagram, areaPathOfTable: string): Focus {
   const { container, containerPath, index } = locateArea(d, areaPathOfTable);
-  if (container.areas[index + 1]?.kind !== 'text') container.areas.splice(index + 1, 0, { kind: 'text', text: '', plainText: '', markups: [] });
+  const follower = container.areas[index + 1];
+  if (follower?.kind !== 'text' || follower.changeInfo?.changetype === 'Geloescht') container.areas.splice(index + 1, 0, newText(d));
   return { path: areaPath(containerPath, index + 1), offset: 0 };
 }
 

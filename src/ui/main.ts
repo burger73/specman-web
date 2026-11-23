@@ -8,10 +8,15 @@ import { createPalette, deleteFocusedStep, toggleBorderOfFocusedStep, toneFocuse
 import { setAllCollapsed } from '../core/steps.ts';
 import { renderDiagram } from './render.ts';
 import { createChangesGroup } from './changes.ts';
+import { useTextTracker } from '../core/recording.ts';
+import { domTextTracker } from './texttrack.ts';
 import { insertTableDialog, installTableEditing } from './tableedit.ts';
 import { insertImageDialog, installImageEditing } from './imageedit.ts';
 import { format, installTextInput, toggleList, type TextInputHost } from './textinput.ts';
 import './style.css';
+
+// Text-Markups beim Markieren als gelöscht bearbeitet das DOM (recording.ts)
+useTextTracker(domTextTracker);
 
 // Beispiele: die Testdateien aus dem Original-Repo
 const samples = import.meta.glob('../../test/fixtures/*.nsd', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;

@@ -18,7 +18,7 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Ä
   Reader (`ModelParser_V002`), Writer (`ModelSerializer_V002`), Change-Set-Farben, Edit-Kern mit Undo/Redo
   (`editor.ts`), Schrittnummern (`numbering.ts`) und -verweise (`steplinks.ts`), Pfade zu Areas (`paths.ts`),
   Operationen auf Areas (`areas.ts`) und Schritten (`steps.ts`), Übernehmen/Verwerfen/Zusammenführen/Review
-  (`tracking.ts`). Die Text-Markups bearbeitet dabei `ui/texttrack.ts` über das DOM (Tests unter jsdom).
+  (`tracking.ts`), Aufzeichnen beim Anlegen und Löschen (`recording.ts`). Die Text-Markups bearbeitet dabei `ui/texttrack.ts` über das DOM (Tests unter jsdom).
 - `src/ui` – Darstellung nach den Swing-Views, Markups, HTML-Bereinigung
 - `test/fixtures` – die V2-Beispieldateien aus dem Original-Repo
 
@@ -37,7 +37,9 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Ä
 - Übernehmen und Verwerfen laufen über das Modell. Gelöschte Areas behalten ihren aktuellen Text, die Anzeige verwirft
   dafür die Änderungen des Lösch-Sets (im Original: `deletionBackup`). Den zweiten Durchlauf nach dem Zusammenführen
   von Texten (`EditContainer.aenderungenVerwerfen`) gibt es auch beim Übernehmen, sonst blieben Markierungen stehen.
-- Die erste Text-Area eines Inhalts wird beim Verwerfen nicht entfernt, sondern geleert.
+- Die erste Text-Area eines Inhalts wird beim Verwerfen nicht entfernt, sondern geleert. Ebenso bleibt sie beim
+  Markieren als gelöscht stehen, auch wenn sie im selben Change Set hinzugefügt wurde (das Original entfernt sie).
+- Ob aufgezeichnet wird, steht im Diagramm (`changeModeEnabled`, `changeSetName`), die Operationen fragen es selbst ab.
 - Fehlermeldungen (z. B. „Der letzte Schritt kann nicht entfernt werden.“) erscheinen als Dialog, das Original
   gibt manche nur auf der Konsole aus (Sonst-Zweig, mindestens zwei Fälle).
 - Bilder: Rastergrafiken werden wie im Original als PNG gespeichert (Umwandlung über ein Canvas), SVG-Dateien als

@@ -4,7 +4,8 @@ import type { Focus } from '../core/editor.ts';
 import { EditException } from '../core/editor.ts';
 import type { Diagram } from '../core/model.ts';
 import { hasSteplinksTo, stepNumbersById } from '../core/steplinks.ts';
-import { addCaseBranch, caseBranchOfPath, deleteStep, insertStep, locateStep, removeCaseBranch, stepOfPath, stepTreeIds, toggleBorder, toggleShade, type NewStepKind } from '../core/steps.ts';
+import { addCaseBranch, caseBranchOfPath, deleteOrMarkStep, insertStep, locateStep, stepOfPath, stepTreeIds, toggleBorder, toggleShade, type NewStepKind } from '../core/steps.ts';
+import { trackingSet } from '../core/recording.ts';
 import { currentFocus } from './focus.ts';
 
 export interface PaletteHost {
@@ -66,7 +67,7 @@ function addBranch(host: PaletteHost): void {
   host.structural((dd) => addCaseBranch(dd, b.step.id, b.branch));
 }
 
-/** DeleteStepOpButton / DeleteStepADBLOp ohne Änderungsverfolgung */
+/** DeleteStepOpButton / DeleteStepADBLOp: entfernen oder bei eingeschalteter Verfolgung als gelöscht markieren */
 export function deleteFocusedStep(host: PaletteHost): void {
   const d = host.diagram();
   const f = currentFocus();
@@ -74,11 +75,14 @@ export function deleteFocusedStep(host: PaletteHost): void {
   const step = stepOfPath(d, f.path);
   if (!step) return;
   const b = caseBranchOfPath(d, f.path);
+  const marking = trackingSet(d) !== undefined && step.changeInfo?.changetype !== 'Hinzugefuegt';
+  if (marking && step.changeInfo?.changetype === 'Geloescht') return;
   // Cursor in einer Zweig-Überschrift: den Zweig entfernen statt des Schritts (Sonst bleibt, mit Meldung)
-  if (b) {
-    host.structural((dd) => removeCaseBranch(dd, b.step.id, b.branch));
+  if (b && !marking) {
+    host.structural((dd) => deleteOrMarkStep(dd, b.step.id, b.branch));
     return;
   }
+  // isDeletionAllowed (beim Markieren auch für einen Zweig, wie im Original)
   const loc = locateStep(d, step.id);
   if (loc && loc.seq.steps.length <= 1) return alert(new EditException('Der letzte Schritt kann nicht entfernt werden.').message);
   const numbers = stepNumbersById(d);
@@ -88,7 +92,7 @@ export function deleteFocusedStep(host: PaletteHost): void {
     !confirm("Der zu löschende Schritt wird referenziert. Möchten Sie den Schritt wirklich löschen? Die Referenzen werden dann als 'Defekt' markiert.")
   )
     return;
-  host.structural((dd) => deleteStep(dd, step.id));
+  host.structural((dd) => deleteOrMarkStep(dd, step.id, b?.branch));
 }
 
 /** Operation auf dem Schritt mit dem Cursor (Einfärben, Rahmen); ohne Schritt passiert nichts, wie im Original */

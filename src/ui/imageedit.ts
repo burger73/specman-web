@@ -1,6 +1,6 @@
 // Bilder einfügen und bearbeiten (AddImageSpecmanOp, PasteKeyPressedHandler, AbstractImageEditArea).
 // Rastergrafiken speichert das Original immer als PNG (PERSISTED_IMAGETYPE), SVG-Dateien bleiben Vektorgrafiken.
-import { addTextAfter, insertImage, removeArea, setImageScale } from '../core/areas.ts';
+import { addTextAfter, insertImage, removeOrMarkArea, setImageScale } from '../core/areas.ts';
 import type { Focus } from '../core/editor.ts';
 import type { Diagram, ImageArea } from '../core/model.ts';
 import { splitAtCaret } from './textsplit.ts';
@@ -83,7 +83,7 @@ export function installImageEditing(stage: HTMLElement, host: ImageHost): void {
     const path = img.dataset.imagePath!;
     if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
-      host.structural((d) => removeArea(d, path));
+      host.structural((d) => removeOrMarkArea(d, path));
     } else if (e.key === 'Enter') {
       e.preventDefault();
       host.structural((d) => addTextAfter(d, path));

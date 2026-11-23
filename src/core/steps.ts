@@ -1,5 +1,6 @@
 // Schritte anlegen und entfernen, Port von SchrittSequenzView.*Zwischenschieben/*Anhaengen, schrittEntfernen,
-// DeleteStepADBLOp und CaseSchrittView.neuenZweigHinzufuegen/zweigEntfernen (ohne Änderungsverfolgung).
+// DeleteStepADBLOp und CaseSchrittView.neuenZweigHinzufuegen/zweigEntfernen. Bei eingeschalteter Verfolgung werden
+// neue Schritte als hinzugefügt angelegt und Löschen markiert nur (recording.ts).
 // Nach jeder Operation werden die Schritte neu nummeriert und die Schrittverweise im Text nachgezogen.
 import type { Focus } from './editor.ts';
 import { EditException } from './editor.ts';
@@ -7,6 +8,7 @@ import { content } from './factory.ts';
 import type { BranchSequence, CaseStep, Diagram, EditorContent, Step, StepSequence } from './model.ts';
 import { childSequences, generateId } from './model.ts';
 import { renumber } from './numbering.ts';
+import { markSequenceAdded, markSequenceDeleted, markStepAdded, markStepDeleted, trackingSet } from './recording.ts';
 import { indexPaths, resolvePath } from './paths.ts';
 import { numberMapping, rewriteSteplinks, stepNumbersById } from './steplinks.ts';
 
@@ -138,6 +140,8 @@ export function insertStep(d: Diagram, kind: NewStepKind, afterStepId: string | 
     const loc = afterStepId !== undefined ? locateStep(d, afterStepId) : undefined;
     const seq = loc?.seq ?? d.mainSequence;
     const step = createStep(kind, seq.steps.length + 1);
+    const cs = trackingSet(d);
+    if (cs) markStepAdded(step, cs);
     const existing = stepNumbersById(d);
     while (existing.has(step.id)) step.id = generateId();
     const at = loc ? loc.index + 1 : seq.steps.length;
@@ -210,6 +214,8 @@ export function addCaseBranch(d: Diagram, stepId: string, leftBranch: number): F
     const newRatios = r.map((x) => x * (1 - share));
     newRatios.splice(leftBranch + 1, 0, share);
     const b = branch(content(`Fall ${leftBranch + 1}`));
+    const cs = trackingSet(d);
+    if (cs) markSequenceAdded(b, cs);
     step.caseSequences.splice(leftBranch, 0, b);
     step.columnWidthRatios = newRatios;
     return focusFirstText(d, b);
@@ -223,16 +229,49 @@ export function removeCaseBranch(d: Diagram, stepId: string, branchIndex: number
   const step = loc.step;
   if (branchIndex === 0) throw new EditException('Der Sonst-Zweig kann nicht entfernt werden.');
   if (step.caseSequences.length <= 2) throw new EditException('Es müssen mindestens 2 Fälle bestehen bleiben.');
-  return restructure(d, () => {
-    const r = ratios(step);
-    const removed = new Set(step.caseSequences[branchIndex - 1].steps.flatMap(stepTreeIds));
-    step.caseSequences.splice(branchIndex - 1, 1);
-    r.splice(branchIndex, 1);
-    const sum = r.reduce((a, b) => a + b, 0) || 1;
-    step.columnWidthRatios = r.map((x) => x / sum);
-    removeCatchesOf(d.mainSequence, removed);
-    return focusFirstText(d, step);
-  });
+  return restructure(d, () => dropCaseBranch(d, step, branchIndex));
+}
+
+/** CaseSchrittView.zweigEntfernen ohne Prüfungen */
+function dropCaseBranch(d: Diagram, step: CaseStep, branchIndex: number): Focus | undefined {
+  const r = ratios(step);
+  const removed = new Set(step.caseSequences[branchIndex - 1].steps.flatMap(stepTreeIds));
+  step.caseSequences.splice(branchIndex - 1, 1);
+  r.splice(branchIndex, 1);
+  const sum = r.reduce((a, b) => a + b, 0) || 1;
+  step.columnWidthRatios = r.map((x) => x / sum);
+  removeCatchesOf(d.mainSequence, removed);
+  return focusFirstText(d, step);
+}
+
+/**
+ * DeleteStepADBLOp: bei eingeschalteter Verfolgung wird ein Schritt als gelöscht markiert, statt ihn zu entfernen.
+ * Hinzugefügte Schritte (in irgendeinem Change Set) werden wie ohne Verfolgung entfernt, schon gelöschte bleiben.
+ * Steht der Cursor in einer Case-Zweig-Überschrift (branch), gilt die Operation dem Zweig
+ * (CaseSchrittView.alsGeloeschtMarkierenUDBL). Die Rückfrage bei Verweisen stellt die UI.
+ * @returns Fokus danach; undefined lässt den Cursor, wo er ist
+ */
+export function deleteOrMarkStep(d: Diagram, stepId: string, branch?: number): Focus | undefined {
+  const cs = trackingSet(d);
+  const loc = locateStep(d, stepId);
+  if (!loc) throw new EditException('Schritt nicht gefunden');
+  const step = loc.step;
+  if (!cs || step.changeInfo?.changetype === 'Hinzugefuegt') {
+    return branch !== undefined && step.kind === 'case' ? removeCaseBranch(d, stepId, branch) : deleteStep(d, stepId);
+  }
+  if (step.changeInfo?.changetype === 'Geloescht') return undefined;
+  // isDeletionAllowed: auch das Markieren verlangt, dass der Schritt nicht der letzte seiner Sequenz ist
+  if (loc.seq.steps.length <= 1) throw new EditException('Der letzte Schritt kann nicht entfernt werden.');
+  if (step.kind === 'case' && branch !== undefined) {
+    const seq = branch === 0 ? step.defaultSequence : step.caseSequences[branch - 1];
+    if (seq.changeInfo?.changetype === 'Hinzugefuegt') return restructure(d, () => dropCaseBranch(d, step, branch));
+    if (branch === 0) throw new EditException('Der Sonst-Zweig kann nicht entfernt werden.');
+    if (step.caseSequences.length <= 2) throw new EditException('Es müssen mindestens 2 Fälle bestehen bleiben.');
+    markSequenceDeleted(d, seq, cs);
+    return undefined;
+  }
+  markStepDeleted(d, step, cs);
+  return undefined;
 }
 
 // ---- Darstellung einzelner Schritte ----

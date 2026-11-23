@@ -81,6 +81,31 @@ function check(name, ok, detail = '') {
   check('Review klappt Schritte ohne Änderungen zu', after > before, `${before} → ${after}`);
   check('Review ist kein Undo-Schritt', await page.isDisabled('button[title^="Rückgängig"]'));
 
+  // ---- 2.4 Aufzeichnen strukturell ----
+  await open('gutenmorgen.nsd');
+  await tool('toolbar.track.changes');
+  const step = (n) => `[data-path="mainSequence/steps/${n}/content/areas/0"]`;
+  await page.click(step(0));
+  await page.click('.app-palette-btn[title="Einfachen Schritt anlegen"]');
+  out = await save();
+  check('neuer Schritt ist hinzugefügt', /simple\(2, [0-9a-f]{8}, `Neuer Schritt \d+`, plain=`Neuer Schritt \d+`, markups=\[\(0,\d+,Changed,yellow\)\], change=\(added, yellow\)\)/.test(out));
+  const bg = await page.$eval('[data-step-id]:nth-child(2)', (e) => getComputedStyle(e).getPropertyValue('--sm-bg'));
+  check('neuer Schritt in der Panel-Farbe', bg.includes('255, 255, 204'), bg);
+  await page.click(step(0));
+  await page.click('button[title="Schritt löschen"]');
+  out = await save();
+  check('Löschen markiert den Schritt', /simple\(1, fcee183f, [^;]*change=\(removed, yellow\)/.test(out));
+  check('gelöschter Text ist nicht bearbeitbar', (await page.getAttribute(step(0), 'contenteditable')) === 'false');
+  await page.click(step(1));
+  await page.click('button[title="Schritt löschen"]');
+  out = await save();
+  check('hinzugefügter Schritt verschwindet beim Löschen', !out.includes('Neuer Schritt'));
+  await k.press('Control+z');
+  await k.press('Control+z');
+  await page.waitForTimeout(50);
+  out = await save();
+  check('Undo nimmt das Markieren zurück', !out.includes('removed') && out.includes('change=(added, yellow)'));
+
   check('keine Fehler im Browser', errors.length === 0, errors.join('\n'));
   await browser.close();
   process.exit(failures ? 1 : 0);

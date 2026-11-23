@@ -1,7 +1,7 @@
 // Tabellen bearbeiten wie TableEditAreaSelectionTracker: Im Rand links und über der Tabelle wählt die Maus Zeilen,
 // Spalten und die Lücken dazwischen aus, die Ecke oben links die ganze Tabelle, der Streifen darunter einen neuen
 // Absatz. Ein Klick führt die Operation aus. Der Mauszeiger zeigt sie mit den Cursor-Grafiken des Originals an.
-import { addTableColumn, addTableRow, insertTable, paragraphBelow, removeArea, removeTableColumn, removeTableRow } from '../core/areas.ts';
+import { addTableColumn, addTableRow, insertTable, paragraphBelow, removeOrMarkArea, removeTableColumn, removeTableRow } from '../core/areas.ts';
 import type { Focus } from '../core/editor.ts';
 import type { Diagram } from '../core/model.ts';
 import { splitAtCaret } from './textsplit.ts';
@@ -73,7 +73,7 @@ export function installTableEditing(stage: HTMLElement, host: TableHost): void {
         case 'removeColumn':
           return removeTableColumn(d, path, sel.index);
         case 'removeTable':
-          return removeArea(d, path);
+          return removeOrMarkArea(d, path);
         case 'paragraphBelow':
           return paragraphBelow(d, path);
       }
