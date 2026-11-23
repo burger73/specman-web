@@ -50,6 +50,16 @@ bekommen ihre Pixelwerte jetzt wie in `Specman.newStepPostInit` beim gespeichert
   `CrossEditAreaFocusMoverFromText`, `…FromImage`), auch über Bilder und Tabellenzellen hinweg.
 - Links/Rechts überspringen einen Schrittverweis als Ganzes (`Left/RightKeyPressedHandler`, `skipToStepnumberLink*`).
 
+**Umgesetzt (3.3):** `ui/focusmove.ts`. Laut Java-Code springen nur Hoch/Runter über Bereichsgrenzen, Links/Rechts
+am Textrand nicht (anders als oben im Plan notiert); Links/Rechts überspringen nur Schrittverweise (normal und
+geändert), wie im Original auch mit Umschalt (die Auswahl fällt dabei weg). Die Nachbarsuche ist ein direkter Port
+von `EditAreaNeighbourFinder` (`findNeighbour`, getestet ohne DOM): Kandidaten sind bearbeitbare Texte und nicht
+gelöschte Bilder, die sichtbar sind, also nicht in zugeklappten Schritten. Überlappende Bereiche haben Vorrang, deshalb
+führt Runter aus dem Bedingungstext eines If-Else immer in den Nein-Zweig. Die gewünschte Spalte (Swings magic caret
+position) bleibt nach einem Sprung gemerkt, solange die Schreibmarke dort steht, wo der Sprung sie abgesetzt hat;
+Bilder merken sich die x-Position in `data-navigation-x`. Ob die Schreibmarke in der ersten bzw. letzten Zeile steht,
+ergibt sich aus den Zeilenrechtecken des Texts.
+
 ### 3.4 Schrittverweise anlegen (`StepnumberLinkAction`, `StepnumberLinkPanel`/`-Dialog`)
 
 - Knopf in der Einfüge-Gruppe, Dialog mit den Schritten zur Auswahl, der Verweis entsteht am Cursor.

@@ -161,6 +161,154 @@ function check(name, ok, detail = '') {
   out = await save();
   check('Tabellenbreite ca. 60 %', /table\(width=(59|60|61)%/.test(out), (out.match(/table\([^\n]*/) || [''])[0]);
 
+  // ---- 3.3 Pfeiltasten zwischen den Bereichen ----
+  await open(REF);
+  const M = 'mainSequence/steps/';
+  /** Schreibmarke an den Anfang (erste Zeile) oder ans Ende (letzte Zeile) eines Texts, x optional per Klick */
+  const caret = (p, where) =>
+    page.evaluate(
+      ([p, where]) => {
+        const el = document.querySelector(`[data-path="${CSS.escape(p)}"]`);
+        el.scrollIntoView({ block: 'center' });
+        el.focus();
+        const texts = [];
+        const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        for (let n = w.nextNode(); n; n = w.nextNode()) if (n.data.trim()) texts.push(n);
+        const r = document.createRange();
+        if (!texts.length) r.selectNodeContents(el);
+        else if (where === 'start') r.setStart(texts[0], texts[0].data.search(/\S/));
+        else r.setStart(texts.at(-1), texts.at(-1).data.trimEnd().length);
+        r.collapse(true);
+        getSelection().removeAllRanges();
+        getSelection().addRange(r);
+      },
+      [p, where],
+    );
+  const clickAt = async (p, fx, fy) => {
+    const el = await page.$(`[data-path="${p}"]`);
+    await el.scrollIntoViewIfNeeded();
+    const b = await el.boundingBox();
+    await page.mouse.click(b.x + b.width * fx, b.y + b.height * fy);
+  };
+  /** wo steht der Fokus: Pfad der Text-Area bzw. „IMG Pfad“ */
+  const where = () =>
+    page.evaluate(() => {
+      const a = document.activeElement;
+      if (a?.dataset?.imagePath) return 'IMG ' + a.dataset.imagePath;
+      const n = getSelection().focusNode;
+      return (n instanceof Element ? n : n?.parentElement)?.closest('[data-path]')?.dataset.path;
+    });
+  const caretX = () => page.evaluate(() => getSelection().getRangeAt(0).getBoundingClientRect().left);
+  const press = async (key, n = 1) => {
+    for (let i = 0; i < n; i++) await k.press(key);
+  };
+  let at;
+
+  await caret(`${M}0/content/areas/0`, 'end');
+  await press('ArrowDown');
+  check('Runter aus der letzten Zeile: in den nächsten Schritt', (at = await where()) === `${M}1/content/areas/0`, at);
+  await press('ArrowDown');
+  check('Runter in die Schleife', (at = await where()) === `${M}1/loopSequence/steps/0/content/areas/0`, at);
+  await press('ArrowUp', 2);
+  check('Hoch zurück in den mehrzeiligen Text, letzte Zeile', (at = await where()) === `${M}0/content/areas/0`, at);
+  await press('ArrowUp');
+  check('Hoch innerhalb des Texts bleibt im Text', (at = await where()) === `${M}0/content/areas/0`, at);
+  await caret(`${M}0/content/areas/0`, 'start');
+  await press('ArrowUp');
+  check('Hoch aus der ersten Zeile: ins Intro', (at = await where()) === 'intro/areas/0', at);
+
+  await caret(`${M}6/content/areas/0`, 'end');
+  await press('ArrowDown');
+  check('gelöschter Schritt wird übersprungen', (at = await where()) === `${M}8/content/areas/0`, at);
+  await press('ArrowDown');
+  check('Runter in den Listenpunkt', (at = await where()) === `${M}8/content/areas/1/content/areas/0`, at);
+
+  await press('ArrowUp', 2);
+  await press('Shift+ArrowDown');
+  check('mit Umschalt bleibt die Taste im Text', (at = await where()) === `${M}6/content/areas/0`, at);
+
+  // If-Else: der Bedingungstext liegt nur über dem Nein-Zweig, überlappende Bereiche haben Vorrang
+  await clickAt(`${M}9/content/areas/0`, 0.05, 0.5);
+  await press('ArrowDown');
+  check('in den Bedingungstext des If-Else', (at = await where()) === `${M}10/content/areas/0`, at);
+  await press('ArrowDown');
+  check('zweizeiliger Bedingungstext: erst in die zweite Zeile', (at = await where()) === `${M}10/content/areas/0`, at);
+  await press('ArrowDown');
+  check('dann in den Nein-Zweig darunter', (at = await where()) === `${M}10/elseSequence/heading/areas/0`, at);
+  await caret(`${M}10/ifSequence/heading/areas/0`, 'end');
+  await press('ArrowDown');
+  check('aus dem Ja-Zweig in dessen Schritt', (at = await where()) === `${M}10/ifSequence/steps/0/content/areas/0`, at);
+  // Spalte bleibt über die kurze Zeile „.“ hinweg gemerkt
+  await clickAt(`${M}3/content/areas/0`, 0.3, 0.75);
+  const x0 = await caretX();
+  await press('ArrowDown');
+  check('in den Schritt mit nur einem Punkt', (at = await where()) === `${M}4/content/areas/0`, at);
+  const xShort = await caretX();
+  await press('ArrowDown');
+  const x1 = await caretX();
+  check('danach wieder in der Ausgangsspalte', xShort < x0 - 100 && Math.abs(x1 - x0) < 15, `${x0} → ${xShort} → ${x1}`);
+
+  // Tabelle
+  await caret(`${M}20/content/areas/0`, 'end');
+  await clickAt(`${M}20/content/areas/0`, 0.45, 0.8);
+  await press('ArrowDown');
+  check('Runter in die Tabellenzelle darunter', (at = await where()) === `${M}20/content/areas/1/cells/0/1/areas/0`, at);
+  await press('ArrowDown');
+  check('Runter in die nächste Tabellenzeile', (at = await where()) === `${M}20/content/areas/1/cells/1/1/areas/0`, at);
+  await press('ArrowDown');
+  check('aus der Tabelle in den nächsten Schritt', (at = await where()) === `${M}21/content/areas/0`, at);
+
+  // zugeklappt
+  await caret(`${M}31/content/areas/0`, 'end');
+  await press('ArrowDown');
+  check('zugeklappte Schleife wird übersprungen', (at = await where()) === `${M}32/loopSequence/steps/0/content/areas/0`, at);
+
+  // Bilder
+  await caret('outro/areas/0', 'end');
+  await press('ArrowDown');
+  check('Runter auf das Bild', (at = await where()) === 'IMG outro/areas/1', at);
+  await press('ArrowDown');
+  check('vom Bild in den Text darunter', (at = await where()) === 'outro/areas/2', at);
+  await press('ArrowUp');
+  check('Hoch zurück aufs Bild', (at = await where()) === 'IMG outro/areas/1', at);
+  await press('ArrowUp');
+  check('vom Bild hoch in den Text', (at = await where()) === 'outro/areas/0', at);
+  await caret('outro/areas/6', 'end');
+  await press('ArrowDown');
+  check('gelöschtes Bild wird übersprungen', (at = await where()) === 'outro/areas/8', at);
+
+  // Schrittverweis „10“ als Ganzes überspringen
+  const LINK = 'mainSequence/catchArea/catchSequences/0/steps/0/content/areas/0';
+  const textBefore = () =>
+    page.evaluate((p) => {
+      const el = document.querySelector(`[data-path="${CSS.escape(p)}"]`);
+      const r = document.createRange();
+      r.selectNodeContents(el);
+      const s = getSelection().getRangeAt(0);
+      r.setEnd(s.startContainer, s.startOffset);
+      return r.toString().replace(/\s+/g, ' ').trimStart();
+    }, LINK);
+  await page.evaluate((p) => {
+    const el = document.querySelector(`[data-path="${CSS.escape(p)}"]`);
+    el.scrollIntoView({ block: 'center' });
+    el.focus();
+    const link = el.querySelector('.sm-markup-Steplink');
+    const r = document.createRange();
+    r.setStartBefore(link);
+    r.collapse(true);
+    getSelection().removeAllRanges();
+    getSelection().addRange(r);
+  }, LINK);
+  await press('ArrowRight');
+  check('Rechts springt hinter den Schrittverweis', (await textBefore()).endsWith('break step 10'), await textBefore());
+  await press('ArrowRight');
+  check('danach wieder zeichenweise', (await textBefore()).endsWith('break step 10 '), await textBefore());
+  await press('ArrowLeft');
+  await press('ArrowLeft');
+  check('Links springt vor den Schrittverweis', (await textBefore()).endsWith('break step '), await textBefore());
+  out = await save();
+  check('Pfeiltasten ändern nichts am Dokument', out === fixture(REF));
+
   check('keine Dialoge unerwartet', dialogs.length === 0, JSON.stringify(dialogs));
   check('keine Fehler im Browser', errors.length === 0, errors.join('\n'));
   await browser.close();

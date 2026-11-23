@@ -13,6 +13,7 @@ import { useTextTracker } from '../core/recording.ts';
 import { domTextTracker } from './texttrack.ts';
 import { insertTableDialog, installTableEditing } from './tableedit.ts';
 import { insertImageDialog, installImageEditing } from './imageedit.ts';
+import { installFocusMoving } from './focusmove.ts';
 import { format, installTextInput, toggleList, type TextInputHost } from './textinput.ts';
 import './style.css';
 
@@ -233,6 +234,7 @@ installTextInput(stage, textHost);
 installTableEditing(stage, textHost);
 installColumnResizing(stage, textHost);
 installImageEditing(stage, textHost);
+installFocusMoving(stage);
 body.append(createPalette(textHost), stage);
 
 document.addEventListener('keydown', (e) => {
