@@ -4,7 +4,7 @@ import type { Focus } from '../core/editor.ts';
 import { EditException } from '../core/editor.ts';
 import type { Diagram } from '../core/model.ts';
 import { hasSteplinksTo, stepNumbersById } from '../core/steplinks.ts';
-import { addCaseBranch, caseBranchOfPath, deleteStep, insertStep, locateStep, removeCaseBranch, stepOfPath, stepTreeIds, type NewStepKind } from '../core/steps.ts';
+import { addCaseBranch, caseBranchOfPath, deleteStep, insertStep, locateStep, removeCaseBranch, stepOfPath, stepTreeIds, toggleBorder, toggleShade, type NewStepKind } from '../core/steps.ts';
 import { currentFocus } from './focus.ts';
 
 export interface PaletteHost {
@@ -90,3 +90,18 @@ export function deleteFocusedStep(host: PaletteHost): void {
     return;
   host.structural((dd) => deleteStep(dd, step.id));
 }
+
+/** Operation auf dem Schritt mit dem Cursor (Einfärben, Rahmen); ohne Schritt passiert nichts, wie im Original */
+export function onFocusedStep(host: PaletteHost, op: (d: Diagram, stepId: string) => void): void {
+  const d = host.diagram();
+  const f = currentFocus();
+  const step = d && f ? stepOfPath(d, f.path) : undefined;
+  if (!step) return;
+  host.structural((dd) => {
+    op(dd, step.id);
+    return f;
+  });
+}
+
+export const toneFocusedStep = (host: PaletteHost) => onFocusedStep(host, toggleShade);
+export const toggleBorderOfFocusedStep = (host: PaletteHost) => onFocusedStep(host, toggleBorder);

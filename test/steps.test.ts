@@ -7,7 +7,7 @@ import { childSequences, type CaseStep, type Diagram, type Step, type StepSequen
 import { resolvePath } from '../src/core/paths.ts';
 import { readDiagram } from '../src/core/reader.ts';
 import { mapPlainToHtml } from '../src/core/steplinks.ts';
-import { addCaseBranch, caseBranchOfPath, deleteStep, insertStep, locateStep, removeCaseBranch, stepOfPath, type NewStepKind } from '../src/core/steps.ts';
+import { addCaseBranch, caseBranchOfPath, deleteStep, insertStep, locateStep, removeCaseBranch, setAllCollapsed, stepOfPath, toggleBorder, toggleShade, type NewStepKind } from '../src/core/steps.ts';
 import { writeDiagram } from '../src/core/writer.ts';
 
 const load = (f: string) => readDiagram(readFileSync(join(import.meta.dirname, 'fixtures', f), 'utf8')).diagram;
@@ -143,5 +143,44 @@ describe('Case-Zweige', () => {
     expect(() => removeCaseBranch(d, step.id, 1)).toThrow('mindestens 2');
     expect(() => removeCaseBranch(d, step.id, 0)).toThrow('Sonst');
     roundtrip(d);
+  });
+});
+
+describe('Einfärben, Rahmen, Klappen', () => {
+  it('Einfärben schaltet die Schattierung um', () => {
+    const d = newDiagram();
+    insertStep(d, 'simple', undefined);
+    const s = d.mainSequence.steps[0];
+    toggleShade(d, s.id);
+    expect(roundtrip(d)).toContain('shade=#dcdcdc');
+    toggleShade(d, s.id);
+    expect(s.shade).toBeUndefined();
+  });
+
+  it('Rahmen: Full ohne gerahmten Vorgänger, sonst Co; der Nachfolger passt sich an', () => {
+    const d = newDiagram();
+    for (let i = 0; i < 3; i++) insertStep(d, 'simple', d.mainSequence.steps.at(-1)?.id);
+    const [a, b, c] = d.mainSequence.steps;
+    toggleBorder(d, b.id);
+    toggleBorder(d, c.id);
+    expect([a, b, c].map((s) => s.decorationStyle)).toEqual(['None', 'Full', 'Co']);
+    toggleBorder(d, a.id);
+    expect([a, b, c].map((s) => s.decorationStyle)).toEqual(['Full', 'Co', 'Co']);
+    toggleBorder(d, b.id);
+    expect([a, b, c].map((s) => s.decorationStyle)).toEqual(['Full', 'None', 'Full']);
+    deleteStep(d, b.id);
+    expect([a, c].map((s) => s.decorationStyle)).toEqual(['Full', 'Co']);
+    roundtrip(d);
+  });
+
+  it('alle zuklappen und aufklappen', () => {
+    const d = load('specman-reference-v1.4-model-v2.nsd');
+    setAllCollapsed(d, true);
+    const all: boolean[] = [];
+    forEachStep(d.mainSequence, (s) => 'collapsed' in s && all.push(s.collapsed));
+    expect(all.length).toBeGreaterThan(3);
+    expect(all.every(Boolean)).toBe(true);
+    setAllCollapsed(d, false);
+    expect(roundtrip(d)).not.toContain('collapsed=true');
   });
 });

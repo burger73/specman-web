@@ -146,7 +146,7 @@ body { margin: 0; background: #f4f4f8; font-family: system-ui, sans-serif; }
 
 /* ---- App-Rahmen ---- */
 .app-bar { position: sticky; top: 0; z-index: 10; display: flex; gap: 8px; align-items: center; padding: 6px 10px; background: #fff; border-bottom: 1px solid #ccc; font-size: 13px; }
-.app-status { color: #666; }
+.app-status { color: #666; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .app-stage { padding: 12px 20px 40px; }
 body.app-drop .app-stage { outline: 3px dashed #3d5aa8; outline-offset: -8px; }
 .app-group { display: flex; gap: 2px; padding-right: 8px; border-right: 1px solid #ddd; }

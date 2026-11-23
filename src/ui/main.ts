@@ -4,7 +4,8 @@ import { readDiagram } from '../core/reader.ts';
 import { writeDiagram } from '../core/writer.ts';
 import { droppedFile, pickFile, saveFile, type OpenedFile } from './files.ts';
 import { currentFocus, restoreFocus } from './focus.ts';
-import { createPalette, deleteFocusedStep, type PaletteHost } from './palette.ts';
+import { createPalette, deleteFocusedStep, toggleBorderOfFocusedStep, toneFocusedStep, type PaletteHost } from './palette.ts';
+import { setAllCollapsed } from '../core/steps.ts';
 import { renderDiagram } from './render.ts';
 import { format, installTextInput, toggleList, type TextInputHost } from './textinput.ts';
 import './style.css';
@@ -45,7 +46,11 @@ const redoBtn = button('material/redo', 'Wiederholen (Strg+Y)', () => redo());
 const boldBtn = button('material/format_bold', 'Fett (Strg+B)', () => format(doc?.editor, 'bold'));
 const italicBtn = button('material/format_italic', 'Kursiv (Strg+I)', () => format(doc?.editor, 'italic'));
 const underlineBtn = button('material/format_underlined', 'Unterstrichen (Strg+U)', () => format(doc?.editor, 'underline'));
+const toneBtn = button('material/contrast', 'Hintergrund schattieren', () => toneFocusedStep(textHost));
 const deleteBtn = button('material/delete', 'Schritt löschen', () => deleteFocusedStep(textHost));
+const borderBtn = button('material/rounded_corner', 'Rahmen umschalten', () => toggleBorderOfFocusedStep(textHost));
+const collapseAllBtn = button('material/unfold_less', 'Alle Schritte einklappen', () => collapseAll(true));
+const expandAllBtn = button('material/unfold_more', 'Alle Schritte ausklappen', () => collapseAll(false));
 const ulBtn = button('material/format_list_bulleted', 'Aufzählung', () => toggleList(textHost, false));
 const olBtn = button('material/format_list_numbered', 'Nummerierte Liste', () => toggleList(textHost, true));
 
@@ -71,7 +76,7 @@ for (const z of ['Datei', '80', '100', '120', '150']) {
 }
 const status = document.createElement('span');
 status.className = 'app-status';
-bar.append(group(newBtn, openBtn, saveBtn, saveAsBtn), group(undoBtn, redoBtn), group(boldBtn, italicBtn, underlineBtn, ulBtn, olBtn), group(deleteBtn), select, zoom, status);
+bar.append(group(newBtn, openBtn, saveBtn, saveAsBtn), group(undoBtn, redoBtn), group(boldBtn, italicBtn, underlineBtn, ulBtn, olBtn), group(toneBtn, deleteBtn, borderBtn), group(collapseAllBtn, expandAllBtn), select, zoom, status);
 const stage = document.createElement('main');
 stage.className = 'app-stage';
 const body = document.createElement('div');
@@ -176,6 +181,12 @@ function updateBar(): void {
   const version = doc.version ? ` – Specman ${doc.version}` : '';
   status.textContent = `${mark}${doc.name}${version}, gespeicherter Zoom ${e.diagram.zoomFactor} %`;
   document.title = `${mark}${doc.name} – Specman Web`;
+}
+
+/** Specman.alleSchritteKlappen: wie das Klappen einzelner Schritte kein Undo-Schritt */
+function collapseAll(collapsed: boolean): void {
+  doc?.editor.mutateSilently((d) => setAllCollapsed(d, collapsed));
+  redraw();
 }
 
 /** Undo/Redo liefern null, wenn es nichts zu tun gab, sonst den Fokus vor der Operation (oder undefined) */

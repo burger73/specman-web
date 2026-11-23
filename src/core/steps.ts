@@ -140,7 +140,9 @@ export function insertStep(d: Diagram, kind: NewStepKind, afterStepId: string | 
     const step = createStep(kind, seq.steps.length + 1);
     const existing = stepNumbersById(d);
     while (existing.has(step.id)) step.id = generateId();
-    seq.steps.splice(loc ? loc.index + 1 : seq.steps.length, 0, step);
+    const at = loc ? loc.index + 1 : seq.steps.length;
+    seq.steps.splice(at, 0, step);
+    updateFollowingStepDecoration(seq, at + 1);
     return focusFirstText(d, step);
   });
 }
@@ -167,6 +169,7 @@ export function deleteStep(d: Diagram, stepId: string): Focus | undefined {
   return restructure(d, () => {
     const removed = new Set(stepTreeIds(loc.step));
     loc.seq.steps.splice(loc.index, 1);
+    updateFollowingStepDecoration(loc.seq, loc.index);
     removeCatchesOf(d.mainSequence, removed);
     const next = loc.seq.steps[loc.index === 0 ? 0 : loc.index - 1];
     return focusFirstText(d, next);
@@ -230,4 +233,52 @@ export function removeCaseBranch(d: Diagram, stepId: string, branchIndex: number
     removeCatchesOf(d.mainSequence, removed);
     return focusFirstText(d, step);
   });
+}
+
+// ---- Darstellung einzelner Schritte ----
+
+/** ToneOpButton: Einfärben ein/aus, Farbe wie im Original new Color(220, 220, 220) */
+export const TONE_SHADE = 0xdcdcdc;
+
+export function toggleShade(d: Diagram, stepId: string): void {
+  const loc = locateStep(d, stepId);
+  if (!loc) throw new EditException('Schritt nicht gefunden');
+  if (loc.step.shade !== undefined) delete loc.step.shade;
+  else loc.step.shade = TONE_SHADE;
+}
+
+/**
+ * ToggleBorderTypeOpButton (SchrittSequenzView.toggleBorderType): abgerundeten Rahmen an- oder abschalten.
+ * Ein neuer Rahmen ist Full, wenn der Vorgänger keinen hat, sonst Co (schließt an). Der Nachfolger passt sich an.
+ */
+export function toggleBorder(d: Diagram, stepId: string): void {
+  const loc = locateStep(d, stepId);
+  if (!loc) throw new EditException('Schritt nicht gefunden');
+  const { seq, index, step } = loc;
+  if (step.decorationStyle === 'None') step.decorationStyle = index === 0 || seq.steps[index - 1].decorationStyle === 'None' ? 'Full' : 'Co';
+  else step.decorationStyle = 'None';
+  updateFollowingStepDecoration(seq, index + 1);
+}
+
+/** SchrittSequenzView.updateFollowingStepDecoration / AbstractSchrittView.decorateAsFollower */
+export function updateFollowingStepDecoration(seq: StepSequence, followerIndex: number): void {
+  const follower = seq.steps[followerIndex];
+  if (!follower || follower.decorationStyle === 'None') return;
+  const preceding = followerIndex > 0 ? seq.steps[followerIndex - 1].decorationStyle : 'None';
+  follower.decorationStyle = preceding === 'None' ? 'Full' : 'Co';
+}
+
+/** AllStepsFolder: alle strukturierten Schritte und Catch-Bereiche auf- bzw. zuklappen */
+export function setAllCollapsed(d: Diagram, collapsed: boolean): void {
+  const walk = (seq: StepSequence) => {
+    for (const s of seq.steps) {
+      if ('collapsed' in s) s.collapsed = collapsed;
+      childSequences(s).forEach(walk);
+    }
+    if (seq.catchArea) {
+      seq.catchArea.collapsed = collapsed;
+      seq.catchArea.catchSequences.forEach(walk);
+    }
+  };
+  walk(d.mainSequence);
 }
