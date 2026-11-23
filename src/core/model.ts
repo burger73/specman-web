@@ -244,7 +244,9 @@ export const ID_LENGTH = 8;
 
 /** AbstractStepModel_V002.generateId() */
 export function generateId(): string {
-  return crypto.randomUUID().replaceAll('-', '').substring(0, ID_LENGTH);
+  // getRandomValues statt randomUUID: Letzteres fehlt ohne https (Vorschau über Tailscale per http)
+  const bytes = crypto.getRandomValues(new Uint8Array(ID_LENGTH / 2));
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 /** AbstractStepModel_V002.normalizeId() */

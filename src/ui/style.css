@@ -1,0 +1,150 @@
+/* Darstellung angelehnt an Specman (Swing). Werte aus specman.graphics.Styles und den Views. */
+
+@font-face { font-family: SitkaDisplay; src: url('/fonts/SitkaDisplay.ttf'); font-weight: normal; font-style: normal; }
+@font-face { font-family: SitkaDisplay; src: url('/fonts/SitkaDisplay-Italic.ttf'); font-weight: normal; font-style: italic; }
+@font-face { font-family: SitkaDisplay; src: url('/fonts/SitkaDisplay-Bold.ttf'); font-weight: bold; font-style: normal; }
+@font-face { font-family: SitkaDisplay; src: url('/fonts/SitkaDisplay-BoldItalic.ttf'); font-weight: bold; font-style: italic; }
+@font-face { font-family: Roboto; src: url('/fonts/Roboto-Regular.ttf'); font-weight: normal; font-style: normal; }
+@font-face { font-family: Roboto; src: url('/fonts/Roboto-Italic.ttf'); font-weight: normal; font-style: italic; }
+@font-face { font-family: Roboto; src: url('/fonts/Roboto-Bold.ttf'); font-weight: bold; font-style: normal; }
+@font-face { font-family: Roboto; src: url('/fonts/Roboto-BoldItalic.ttf'); font-weight: bold; font-style: italic; }
+@font-face { font-family: CourierPrime; src: url('/fonts/CourierPrime.ttf'); font-weight: normal; font-style: normal; }
+@font-face { font-family: CourierPrime; src: url('/fonts/CourierPrime-Italic.ttf'); font-weight: normal; font-style: italic; }
+@font-face { font-family: CourierPrime; src: url('/fonts/CourierPrime-Bold.ttf'); font-weight: bold; font-style: normal; }
+@font-face { font-family: CourierPrime; src: url('/fonts/CourierPrime-BoldItalic.ttf'); font-weight: bold; font-style: italic; }
+
+:root {
+  --sm-line: #000;          /* DIAGRAMM_LINE_COLOR */
+  --sm-lw: 2px;             /* LINIENBREITE */
+  --sm-divider: #c0c0c0;    /* Hintergrundfarbe_Deviderbar = LIGHT_GRAY */
+  --sm-nr-bg: #c0c0c0;      /* SCHRITTNUMMER_FARBE */
+}
+
+body { margin: 0; background: #f4f4f8; font-family: system-ui, sans-serif; }
+
+/* ---- Blatt ---- */
+.sm-sheet {
+  background: #fff;
+  padding: 4px 3px 24px;
+  box-sizing: content-box;
+  font-family: SitkaDisplay, Georgia, serif;
+  font-size: 15px;          /* SpecmanFontSizeAction.DEFAULT_FONTSIZE */
+  line-height: 1.33;
+  color: #000;
+}
+.sm-frame { border: var(--sm-lw) solid var(--sm-line); background: var(--sm-line); }
+
+/* ---- Sequenzen und Zellen: Linien = Lücken auf schwarzem Grund ---- */
+.sm-seq { display: flex; flex-direction: column; gap: var(--sm-lw); background: var(--sm-line); min-width: 0; }
+.sm-seq > * { flex: none; }
+/* wie im Original füllt der letzte Schritt einer kürzeren Sequenz den Rest der Höhe */
+.sm-seq > :last-child { flex-grow: 1; }
+.sm-cell { background: var(--sm-bg); }
+.sm-structured { display: grid; gap: var(--sm-lw); background: var(--sm-line); }
+.sm-subsequence { grid-template-columns: minmax(0, 1fr); }
+
+/* ---- Edit-Container ---- */
+.sm-ec { position: relative; padding: 3px 4px 3px 4px; min-width: 0; overflow-wrap: break-word; }
+.sm-ec.sm-cell { padding-top: 10px; }     /* Meta-Streifen mit der Schrittnummer über dem Text */
+.sm-meta {
+  position: absolute; top: 0; right: 0; display: flex; align-items: flex-start; gap: 3px; z-index: 2;
+  font: bold 10px Roboto, sans-serif; line-height: 1;
+}
+.sm-nr { background: var(--sm-nr-bg); color: #fff; padding: 0 4px; height: 10px; line-height: 10px; margin: 1px 1px 0 0; border-radius: 3px; white-space: nowrap; }
+
+.sm-text > :first-child { margin-top: 0; }
+.sm-text > :last-child { margin-bottom: 0; }
+.sm-text h1 { font-size: 25px; margin: 6px 0 10px; }
+.sm-text h2 { font-size: 20px; margin: 6px 0 6px; }
+.sm-text h3 { font-size: 17px; margin: 4px 0 4px; }
+.sm-text p { margin: 0; }
+.sm-text a { color: #3d5aa8; }
+.sm-text pre, .sm-text code, .sm-text tt { font-family: CourierPrime, monospace; }
+.sm-text font[size="1"] { font-size: 10px; }
+.sm-text font[size="2"] { font-size: 12px; }
+.sm-text font[size="3"] { font-size: 15px; }
+.sm-text font[size="4"] { font-size: 18px; }
+.sm-text font[size="5"] { font-size: 24px; }
+
+.sm-list { margin: 4px 0; padding-left: 20px; }
+.sm-list > li { margin: 3px 0; }
+.sm-list > li::marker { font-size: 13px; }
+
+.sm-table-wrap { margin: 4px 0; }
+.sm-table { border-collapse: collapse; table-layout: fixed; }
+.sm-table td { border: 1px solid #000; padding: 2px 4px; vertical-align: top; }
+
+.sm-image img { max-width: 100%; display: block; }
+.sm-plantuml details { border: 1px dashed #999; padding: 4px 8px; margin: 4px 0; font: 12px system-ui, sans-serif; color: #555; }
+.sm-plantuml pre { font: 11px CourierPrime, monospace; color: #333; white-space: pre-wrap; }
+
+.sm-intro, .sm-outro { padding: 0 0 6px; }
+.sm-outro { padding-top: 8px; }
+
+/* ---- Abgerundete Darstellung (RoundedBorderDecorator: INSET 15, ARC 25, Linie 2) ---- */
+.sm-deco { background: #fff; padding: 0 15px 15px; margin-top: calc(-1 * var(--sm-lw)); }
+.sm-seq > .sm-deco:first-child { margin-top: 0; }
+.sm-deco.sm-deco-top { padding-top: 15px; }
+.sm-deco-box { border: var(--sm-lw) solid var(--sm-line); border-radius: 12.5px; overflow: hidden; background: var(--sm-line); }
+
+/* ---- Break und Catch: Spitze links bzw. rechts ---- */
+.sm-break, .sm-catch-heading { padding-left: 24px; }
+.sm-chevron { position: absolute; left: 0; top: 0; width: 18px; height: 100%; overflow: visible; }
+.sm-chevron polyline { fill: none; stroke: var(--sm-line); stroke-width: var(--sm-lw); vector-effect: non-scaling-stroke; }
+
+/* ---- Schleifen ---- */
+.sm-loop-text { grid-column: 1 / span 2; }
+
+/* ---- Verzweigungen ---- */
+.sm-branching { grid-template-rows: auto auto auto; }
+.sm-condition { position: relative; z-index: 1; padding-left: calc(20px + 4px); }
+.sm-branch-left { padding-right: 24px; }
+.sm-branch-right { padding-left: 24px; }
+.sm-raute { position: absolute; left: calc(-1 * var(--sm-lw) / 2); bottom: 0; transform: translate(-50%, 50%); overflow: visible; z-index: 3; }
+.sm-raute polygon { fill: #fff; stroke: var(--sm-line); stroke-width: var(--sm-lw); }
+.sm-branching > .sm-seq { align-self: stretch; }
+
+/* ---- Catch-Bereich ---- */
+.sm-catcharea { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sm-lw); background: var(--sm-line); }
+.sm-divider { background: var(--sm-divider); height: 12px; }
+.sm-catch-columns { display: grid; gap: var(--sm-lw); background: var(--sm-line); }
+.sm-catch { display: flex; flex-direction: column; background: #fff; min-width: 0; }
+.sm-catch > .sm-cocatch, .sm-catch > .sm-seq { border-top: var(--sm-lw) solid var(--sm-line); }
+.sm-catch > .sm-seq { flex-grow: 1; }
+.sm-cocatch { border-right: var(--sm-lw) solid var(--sm-line); }
+
+/* ---- Auf- und Zuklappen ---- */
+.sm-toggle {
+  width: 13px; height: 13px; margin: 1px 0 0; padding: 0; border: 1px solid #444; border-radius: 3px; background: #fff; cursor: pointer;
+  opacity: 0; transition: opacity 0.1s;
+}
+.sm-toggle::before { content: '⌄'; display: block; font: bold 11px/7px system-ui, sans-serif; color: #000; }
+.sm-ec:hover > .sm-meta > .sm-toggle, .sm-collapsed > .sm-ec > .sm-meta > .sm-toggle,
+.sm-collapsed > .sm-condition > .sm-meta > .sm-toggle { opacity: 1; }
+.sm-collapsed > .sm-body { display: none !important; }
+.sm-collapsed.sm-branching > .sm-condition > .sm-raute { display: none; }
+
+/* ---- Änderungen ganzer Elemente (0.6) ---- */
+/* Schritte bekommen die Panel-Farbe über --sm-bg; Areas, Listenpunkte und Zweig-Überschriften direkt */
+.sm-text.sm-change, li.sm-change, .sm-table-wrap.sm-change, .sm-image.sm-change { background: var(--sm-change-panel); }
+.sm-branch-heading.sm-change, .sm-catch-heading.sm-change { --sm-bg: var(--sm-change-panel); }
+.sm-sheet { --sm-bg: #fff; }
+.sm-deleted-text { background: #000; color: #c0c0c0 !important; text-decoration: line-through; }
+.sm-deleted-text * { color: inherit !important; }
+
+/* Schrittnummer-Varianten (StepnumberLabel) */
+.sm-nr s { text-decoration-thickness: 1px; }
+.sm-nr-deleted, .sm-nr-source { background: #000; color: #c0c0c0; }
+.sm-nr-target { color: #000; box-shadow: inset 0 0 0 1px rgb(255, 255, 204); }
+
+/* Meta-Tags */
+.sm-tag {
+  display: inline-flex; align-items: center; gap: 2px; height: 12px; padding: 0 3px; margin-top: 1px;
+  border: 1px solid transparent; border-radius: 3px; font: 10px Roboto, sans-serif; color: #000; cursor: default;
+}
+.sm-tag-icon { height: 10px; width: auto; }
+
+/* ---- App-Rahmen ---- */
+.app-bar { position: sticky; top: 0; z-index: 10; display: flex; gap: 8px; align-items: center; padding: 6px 10px; background: #fff; border-bottom: 1px solid #ccc; font-size: 13px; }
+.app-status { color: #666; }
+.app-stage { padding: 12px 20px 40px; }
