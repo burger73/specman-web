@@ -57,11 +57,25 @@ export function renderDiagram(d: Diagram, opts: RenderOptions = {}): HTMLElement
   // width gilt im Original beim gespeicherten Zoom (Bildschirmpixel), umgerechnet auf 100 %
   sheet.style.width = `${(d.width * 100) / (d.zoomFactor || 100)}px`;
   if (d.intro) sheet.append(renderContent(d.intro, { cls: 'sm-intro' }));
-  const frame = div('sm-frame');
-  frame.append(renderSequence(d.mainSequence));
-  sheet.append(frame);
+  if (d.mainSequence.steps.length > 0) {
+    const frame = div('sm-frame');
+    frame.append(renderSequence(d.mainSequence));
+    sheet.append(frame);
+  } else sheet.append(welcome());
   if (d.outro) sheet.append(renderContent(d.outro, { cls: 'sm-outro' }));
   return sheet;
+}
+
+/** WelcomeMessagePanel (welcome.message): Hinweis im leeren Diagramm, bis der erste Schritt angelegt ist */
+function welcome(): HTMLElement {
+  const el = div('sm-welcome');
+  const h = document.createElement('h2');
+  h.textContent = 'Willkommen bei Specman Web';
+  const p = document.createElement('p');
+  p.textContent =
+    'Das ist der Modellierungsbereich. Klicken Sie auf einen Button der Schrittpalette, um einen Schritt unterhalb des Schritts anzufügen, in dem der Textcursor steht.';
+  el.append(h, p);
+  return el;
 }
 
 // ---- Sequenzen ----

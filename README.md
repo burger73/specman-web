@@ -25,6 +25,10 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten) in Arb
   trotzdem dem Original.
 - Undo/Redo über Schnappschüsse des ganzen Diagramms statt über die Undoable*-Klassen. Auf- und Zuklappen ist wie
   im Original kein Undo-Schritt und bleibt bei Undo/Redo erhalten.
+- Nach dem Speichern bleibt die Undo-Historie erhalten (das Original verwirft sie).
+- Ein leeres Diagramm (ohne Schritt) lässt sich nicht speichern, weil die Grammatik mindestens einen Schritt verlangt.
+- Speichern schreibt mit der File System Access API in die geöffnete Datei zurück. Das gibt es nur in Chrome/Edge
+  und nur im sicheren Kontext (https oder localhost). Sonst wird die Datei heruntergeladen.
 - Reader: Die Zusatz-Areas eines Listenpunkts behalten ihre Reihenfolge (Java sortiert nach Text/Tabelle/Bild).
 - Writer: schreibt standardmäßig Version 1.4.0 ins Envelope, beim Roundtrip die Version der gelesenen Datei.
 - Nicht in Phase 0: Bearbeiten, PDF-Export, PlantUML-Rendering (Platzhalter mit Quelltext), JSON-Format v1.
@@ -32,6 +36,7 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten) in Arb
 ## Lizenzen
 
 Code des Originals: BSD-3-Clause, siehe `LICENSE-specman.txt`. Die Schriften in `public/fonts` stammen aus dem
-Original-Repo. Roboto und Courier Prime stehen unter offenen Lizenzen, **Sitka ist eine Microsoft-Schrift**
+Original-Repo, ebenso die Icons in `public/icons` (Material Symbols unter Apache 2.0, siehe
+`public/icons/material/LICENSE`, und die Schritt-Icons von Jan Leßner). Roboto und Courier Prime stehen unter offenen Lizenzen, **Sitka ist eine Microsoft-Schrift**
 („All Rights Reserved“). Vor einer Veröffentlichung klären oder ersetzen. Für Browser wurden die Tabellen der
 Sitka-Dateien mit `scripts/fix-fonts.cjs` repariert.
