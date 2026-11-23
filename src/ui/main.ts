@@ -7,6 +7,7 @@ import { currentFocus, restoreFocus } from './focus.ts';
 import { createPalette, deleteFocusedStep, toggleBorderOfFocusedStep, toneFocusedStep, type PaletteHost } from './palette.ts';
 import { setAllCollapsed } from '../core/steps.ts';
 import { renderDiagram } from './render.ts';
+import { insertTableDialog, installTableEditing } from './tableedit.ts';
 import { format, installTextInput, toggleList, type TextInputHost } from './textinput.ts';
 import './style.css';
 
@@ -46,6 +47,7 @@ const redoBtn = button('material/redo', 'Wiederholen (Strg+Y)', () => redo());
 const boldBtn = button('material/format_bold', 'Fett (Strg+B)', () => format(doc?.editor, 'bold'));
 const italicBtn = button('material/format_italic', 'Kursiv (Strg+I)', () => format(doc?.editor, 'italic'));
 const underlineBtn = button('material/format_underlined', 'Unterstrichen (Strg+U)', () => format(doc?.editor, 'underline'));
+const tableBtn = button('material/table', 'Tabelle einfügen', () => insertTableDialog(textHost));
 const toneBtn = button('material/contrast', 'Hintergrund schattieren', () => toneFocusedStep(textHost));
 const deleteBtn = button('material/delete', 'Schritt löschen', () => deleteFocusedStep(textHost));
 const borderBtn = button('material/rounded_corner', 'Rahmen umschalten', () => toggleBorderOfFocusedStep(textHost));
@@ -76,7 +78,7 @@ for (const z of ['Datei', '80', '100', '120', '150']) {
 }
 const status = document.createElement('span');
 status.className = 'app-status';
-bar.append(group(newBtn, openBtn, saveBtn, saveAsBtn), group(undoBtn, redoBtn), group(boldBtn, italicBtn, underlineBtn, ulBtn, olBtn), group(toneBtn, deleteBtn, borderBtn), group(collapseAllBtn, expandAllBtn), select, zoom, status);
+bar.append(group(newBtn, openBtn, saveBtn, saveAsBtn), group(undoBtn, redoBtn), group(boldBtn, italicBtn, underlineBtn, ulBtn, olBtn), group(tableBtn), group(toneBtn, deleteBtn, borderBtn), group(collapseAllBtn, expandAllBtn), select, zoom, status);
 const stage = document.createElement('main');
 stage.className = 'app-stage';
 const body = document.createElement('div');
@@ -202,6 +204,7 @@ const textHost: TextInputHost & PaletteHost = {
   diagram: () => doc?.editor.diagram,
   undo,
   redo,
+  focus: (f) => restoreFocus(stage, f),
   structural(op) {
     const editor = doc?.editor;
     if (!editor) return;
@@ -214,6 +217,7 @@ const textHost: TextInputHost & PaletteHost = {
   },
 };
 installTextInput(stage, textHost);
+installTableEditing(stage, textHost);
 body.append(createPalette(textHost), stage);
 
 document.addEventListener('keydown', (e) => {

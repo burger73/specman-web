@@ -170,3 +170,20 @@ body.app-drop .app-stage { outline: 3px dashed #3d5aa8; outline-offset: -8px; }
 .app-palette-btn { display: flex; align-items: center; gap: 6px; padding: 3px 8px 3px 4px; border: 1px solid transparent; border-radius: 4px; background: none; font: 12px system-ui, sans-serif; text-align: left; white-space: nowrap; cursor: pointer; }
 .app-palette-btn img { width: 22px; height: 22px; }
 .app-palette-btn:hover { background: #eef; border-color: #ccd; }
+
+/* ---- Tabellen bearbeiten (TableEditArea: Rand BORDER_THICKNESS 7 für die Auswahl) ---- */
+.sm-editable .sm-table-wrap { position: relative; margin: 0; padding: 7px 0 7px 7px; }
+.sm-table-selection { position: absolute; background: rgba(200, 200, 200, 0.6); pointer-events: none; z-index: 4; }
+.sm-table-wrap[data-table-op='addRow'] { cursor: url('/cursors/add-row-cursor.png') 18 9, row-resize; }
+.sm-table-wrap[data-table-op='removeRow'] { cursor: url('/cursors/remove-row-cursor.png') 22 9, not-allowed; }
+.sm-table-wrap[data-table-op='addColumn'] { cursor: url('/cursors/add-column-cursor.png') 9 18, col-resize; }
+.sm-table-wrap[data-table-op='removeColumn'] { cursor: url('/cursors/remove-column-cursor.png') 9 22, not-allowed; }
+.sm-table-wrap[data-table-op='removeTable'] { cursor: url('/cursors/remove-table-cursor.png') 18 18, not-allowed; }
+.sm-table-wrap[data-table-op='paragraphBelow'] { cursor: url('/cursors/add-paragraph-cursor.png') 19 0, text; }
+
+/* Dialoge */
+.app-dialog { border: 1px solid #aaa; border-radius: 6px; padding: 14px 18px; font: 13px system-ui, sans-serif; }
+.app-dialog h3 { margin: 0 0 10px; font-size: 15px; }
+.app-dialog label { display: flex; justify-content: space-between; gap: 12px; margin: 6px 0; }
+.app-dialog input { width: 70px; }
+.app-dialog-buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }

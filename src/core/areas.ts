@@ -3,7 +3,7 @@
 // schon als fertige Text-Areas (HTML zerlegen kann nur das DOM), hier wird nur das Modell umgebaut.
 import type { Focus } from './editor.ts';
 import { EditException } from './editor.ts';
-import type { Diagram, EditArea, EditorContent, ListItemEditArea, TextEditArea } from './model.ts';
+import type { Diagram, EditArea, EditorContent, ListItemEditArea, TableEditArea, TextEditArea } from './model.ts';
 import { resolvePath } from './paths.ts';
 
 /** Lage einer Area: Inhalt, in dem sie steht, ihr Index und der Pfad des Inhalts */
@@ -169,4 +169,122 @@ function lastTextFocus(d: Diagram, path: string): Focus | undefined {
     default:
       return undefined;
   }
+}
+
+// ---- Tabellen (TableEditArea, ohne Änderungsverfolgung) ----
+
+const emptyCell = (): EditorContent => ({ areas: [{ kind: 'text', text: '', plainText: '', markups: [] }] });
+
+function locateTable(d: Diagram, tablePath: string): AreaLocation & { area: TableEditArea } {
+  const loc = locateArea(d, tablePath);
+  if (loc.area.kind !== 'table') throw new EditException(`${tablePath} ist keine Tabelle`);
+  return loc as AreaLocation & { area: TableEditArea };
+}
+
+const cellPath = (tablePath: string, r: number, c: number) => `${tablePath}/cells/${r}/${c}/areas/0`;
+
+/** Tabelle und Zelle zu einem Pfad in einer Tabellenzelle (innerste Tabelle) */
+export function tableCellOfPath(path: string): { tablePath: string; row: number; column: number } | undefined {
+  const m = /^(.*\/areas\/\d+)\/cells\/(\d+)\/(\d+)\/areas\/\d+$/.exec(path);
+  return m ? { tablePath: m[1], row: Number(m[2]), column: Number(m[3]) } : undefined;
+}
+
+/**
+ * EditContainer.addTableUDBL: Tabelle am Cursor einfügen. before ersetzt die Text-Area, after (der Text hinter dem
+ * Cursor) folgt der Tabelle, wenn der Cursor nicht am Ende stand. Neue Tabellen nehmen 100 % der Breite ein.
+ */
+export function insertTable(d: Diagram, path: string, before: TextEditArea, after: TextEditArea | undefined, columns: number, rows: number): Focus {
+  if (columns < 1 || rows < 1) throw new EditException('Eine Tabelle braucht mindestens eine Zeile und eine Spalte.');
+  const { container, containerPath, index } = locateText(d, path);
+  const table: TableEditArea = {
+    kind: 'table',
+    cells: Array.from({ length: rows }, () => Array.from({ length: columns }, emptyCell)),
+    tableWidthPercent: 100,
+  };
+  container.areas.splice(index, 1, before, table, ...(after ? [after] : []));
+  return { path: cellPath(areaPath(containerPath, index + 1), 0, 0), offset: 0 };
+}
+
+/** TableEditArea.addRowUDBL: leere Zeile an rowIndex */
+export function addTableRow(d: Diagram, tablePath: string, rowIndex: number): Focus {
+  const { area } = locateTable(d, tablePath);
+  area.cells.splice(rowIndex, 0, area.cells[0].map(emptyCell));
+  return { path: cellPath(tablePath, rowIndex, 0), offset: 0 };
+}
+
+/** TableEditArea.removeRowOrMarkAsDeletedUDBL: die letzte Zeile entfernt die ganze Tabelle */
+export function removeTableRow(d: Diagram, tablePath: string, rowIndex: number): Focus | undefined {
+  const { area } = locateTable(d, tablePath);
+  if (area.cells.length <= 1) return removeArea(d, tablePath);
+  area.cells.splice(rowIndex, 1);
+  return { path: cellPath(tablePath, Math.min(rowIndex, area.cells.length - 1), 0), offset: 0 };
+}
+
+/**
+ * TableEditArea.addColumnUDBL: Die Tabellenbreite bleibt. Ohne gesetzte Spaltenbreiten sind danach alle gleich breit,
+ * sonst nimmt die neue Spalte der Spalte am Einfügeindex (beim Anhängen der letzten) die Hälfte ab. So steht es
+ * im Code von ColumnSpecByPercent.allocPercent, der Kommentar dort spricht von der vorangehenden Spalte.
+ */
+export function addTableColumn(d: Diagram, tablePath: string, colIndex: number): Focus {
+  const { area } = locateTable(d, tablePath);
+  const p = area.columnsWidthPercent;
+  if (p?.length) {
+    const steal = Math.min(colIndex, p.length - 1);
+    const half = Math.trunc(p[steal] / 2);
+    p[steal] = half;
+    p.splice(colIndex, 0, half);
+  }
+  for (const row of area.cells) row.splice(colIndex, 0, emptyCell());
+  return { path: cellPath(tablePath, 0, colIndex), offset: 0 };
+}
+
+/** TableEditArea.removeColumnOrMarkAsDeletedUDBL: die Breite geht an die folgende (bzw. vorige) Spalte (releasePercent) */
+export function removeTableColumn(d: Diagram, tablePath: string, colIndex: number): Focus | undefined {
+  const { area } = locateTable(d, tablePath);
+  if (area.cells[0].length <= 1) return removeArea(d, tablePath);
+  const p = area.columnsWidthPercent;
+  if (p?.length) {
+    const eater = colIndex === p.length - 1 ? colIndex - 1 : colIndex + 1;
+    p[eater] += p[colIndex];
+    p.splice(colIndex, 1);
+  }
+  for (const row of area.cells) row.splice(colIndex, 1);
+  return { path: cellPath(tablePath, 0, Math.min(colIndex, area.cells[0].length - 1)), offset: 0 };
+}
+
+/**
+ * EditContainer.removeEditAreaUDBL: Area entfernen; stehen danach zwei Texte direkt hintereinander, werden sie zu einem.
+ * @returns Fokus ans Ende des vorangehenden Texts
+ */
+export function removeArea(d: Diagram, path: string): Focus | undefined {
+  const { container, containerPath, index } = locateArea(d, path);
+  if (index === 0) throw new EditException('Die erste Area eines Inhalts kann nicht entfernt werden.');
+  container.areas.splice(index, 1);
+  const prev = container.areas[index - 1];
+  const next = container.areas[index];
+  if (prev.kind === 'text' && next?.kind === 'text') {
+    const offset = prev.plainText.length;
+    appendText(prev, asParagraph(next));
+    container.areas.splice(index, 1);
+    return { path: areaPath(containerPath, index - 1), offset };
+  }
+  return lastTextFocus(d, areaPath(containerPath, index - 1));
+}
+
+/**
+ * TableEditArea.enterParagraphBelowUDBL: Cursor an den Anfang des folgenden Texts, ohne solchen eine leere Text-Area
+ * hinter der Tabelle anlegen.
+ */
+export function paragraphBelow(d: Diagram, areaPathOfTable: string): Focus {
+  const { container, containerPath, index } = locateArea(d, areaPathOfTable);
+  if (container.areas[index + 1]?.kind !== 'text') container.areas.splice(index + 1, 0, { kind: 'text', text: '', plainText: '', markups: [] });
+  return { path: areaPath(containerPath, index + 1), offset: 0 };
+}
+
+/** TableEditArea.focusNextCell (Tab): nächste Zelle, in der letzten Zelle eine neue Zeile */
+export function nextCell(d: Diagram, tablePath: string, row: number, column: number): Focus {
+  const { area } = locateTable(d, tablePath);
+  if (column + 1 < area.cells[row].length) return { path: cellPath(tablePath, row, column + 1), offset: 0 };
+  if (row + 1 < area.cells.length) return { path: cellPath(tablePath, row + 1, 0), offset: 0 };
+  return addTableRow(d, tablePath, area.cells.length);
 }

@@ -2,8 +2,8 @@
 // Aufeinanderfolgende Eingaben in derselben Area bilden einen Undo-Schritt (mergeKey = Pfad der Area).
 import type { DiagramEditor, Focus } from '../core/editor.ts';
 import { content } from '../core/factory.ts';
-import { backspaceAtStart, locateArea, parentListItem, splitListItem, addListItem, dissolveListItem } from '../core/areas.ts';
-import type { Diagram, TextEditArea } from '../core/model.ts';
+import { addListItem, backspaceAtStart, dissolveListItem, locateArea, nextCell, parentListItem, splitListItem, tableCellOfPath } from '../core/areas.ts';
+import type { Diagram, TableEditArea, TextEditArea } from '../core/model.ts';
 import { resolvePath } from '../core/paths.ts';
 import { currentFocus } from './focus.ts';
 import { readTextArea } from './textedit.ts';
@@ -15,6 +15,8 @@ export interface TextInputHost {
   redo(): void;
   /** Strukturelle Operation als eigener Undo-Schritt, danach neu zeichnen und den gelieferten Fokus setzen */
   structural(op: (d: Diagram) => Focus | undefined): void;
+  /** Fokus setzen ohne Änderung am Modell */
+  focus(f: Focus): void;
 }
 
 export function installTextInput(stage: HTMLElement, host: TextInputHost): void {
@@ -68,7 +70,16 @@ export function installTextInput(stage: HTMLElement, host: TextInputHost): void 
     const editor = host.editor();
     if (!el || !editor) return;
     const path = el.dataset.path!;
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Tab' && !e.shiftKey) {
+      // TabKeyPressedHandler: in Tabellen zur nächsten Zelle, in der letzten eine neue Zeile
+      const cell = tableCellOfPath(path);
+      if (!cell) return;
+      e.preventDefault();
+      const table = resolvePath(editor.diagram, cell.tablePath) as TableEditArea;
+      const last = cell.row === table.cells.length - 1 && cell.column === table.cells[cell.row].length - 1;
+      if (last) host.structural((d) => nextCell(d, cell.tablePath, cell.row, cell.column));
+      else host.focus(nextCell(editor.diagram, cell.tablePath, cell.row, cell.column));
+    } else if (e.key === 'Enter' && !e.shiftKey) {
       const { containerPath } = locateArea(editor.diagram, path);
       if (!parentListItem(editor.diagram, containerPath)) return;
       const parts = splitAtCaret(el);

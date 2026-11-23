@@ -56,6 +56,7 @@ export function renderDiagram(d: Diagram, opts: RenderOptions = {}): HTMLElement
   stepNumbers = new Map(queryAllSteps(d).map((s) => [s.id, s.stepNumber]));
   tagConfigs = new Map(d.metaTagConfigs.map((c) => [c.name, c]));
   const sheet = div('sm-sheet');
+  if (opts.editable) sheet.classList.add('sm-editable');
   // width gilt im Original beim gespeicherten Zoom (Bildschirmpixel), umgerechnet auf 100 %
   sheet.style.width = `${(d.width * 100) / (d.zoomFactor || 100)}px`;
   const intro = introOutro(d, 'intro');
@@ -410,6 +411,8 @@ function markupBackground(m: Markup): string {
 
 function renderTable(t: TableEditArea): HTMLElement {
   const wrap = div('sm-table-wrap');
+  const path = paths.get(t);
+  if (path !== undefined) wrap.dataset.tablePath = path;
   const table = document.createElement('table');
   table.className = 'sm-table';
   table.style.width = `${t.tableWidthPercent}%`;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { addListItem, appendText, backspaceAtStart, dissolveListItem, splitListItem } from '../src/core/areas.ts';
+import { addListItem, addTableColumn, addTableRow, appendText, backspaceAtStart, dissolveListItem, insertTable, nextCell, paragraphBelow, removeTableColumn, removeTableRow, splitListItem, tableCellOfPath } from '../src/core/areas.ts';
 import { newDiagram, textArea } from '../src/core/factory.ts';
-import type { Diagram, EditArea, ListItemEditArea, TextEditArea } from '../src/core/model.ts';
+import type { Diagram, EditArea, ListItemEditArea, TableEditArea, TextEditArea } from '../src/core/model.ts';
 import { renumber } from '../src/core/numbering.ts';
 import { readDiagram } from '../src/core/reader.ts';
 import { writeDiagram } from '../src/core/writer.ts';
@@ -20,6 +20,7 @@ const roundtrip = (d: Diagram) => {
   renumber(d);
   const s = writeDiagram(d);
   expect(writeDiagram(readDiagram(s).diagram)).toBe(s);
+  return s;
 };
 
 describe('Text anhängen', () => {
@@ -90,5 +91,64 @@ describe('Listen', () => {
 
     d = diagram(textArea('a'));
     expect(backspaceAtStart(d, `${P}/areas/0`)).toBeUndefined();
+  });
+});
+
+describe('Tabellen', () => {
+  const table = (d: Diagram) => areas(d)[1] as TableEditArea;
+  const T = `${P}/areas/1`;
+
+  it('am Cursor einfügen, Text dahinter folgt der Tabelle', () => {
+    const d = diagram(textArea('vor nach'));
+    const focus = insertTable(d, `${P}/areas/0`, textArea('vor'), textArea('nach'), 3, 2);
+    expect(texts(areas(d))).toEqual(['vor', 'table', 'nach']);
+    expect(table(d).cells).toHaveLength(2);
+    expect(table(d).cells[0]).toHaveLength(3);
+    expect(focus).toEqual({ path: `${T}/cells/0/0/areas/0`, offset: 0 });
+    const s = roundtrip(d);
+    expect(s).toContain('table(');
+  });
+
+  it('Zeilen und Spalten, Spaltenbreiten wie allocPercent/releasePercent', () => {
+    const d = diagram(textArea('a'));
+    insertTable(d, `${P}/areas/0`, textArea('a'), undefined, 2, 1);
+    addTableRow(d, T, 1);
+    addTableColumn(d, T, 2);
+    expect(table(d).cells.map((r) => r.length)).toEqual([3, 3]);
+    expect(table(d).columnsWidthPercent).toBeUndefined();
+    table(d).columnsWidthPercent = [50, 30, 20];
+    // wie ColumnSpecByPercent.allocPercent: abgegeben wird von der Spalte am Einfügeindex (am Ende von der letzten)
+    addTableColumn(d, T, 1);
+    expect(table(d).columnsWidthPercent).toEqual([50, 15, 15, 20]);
+    addTableColumn(d, T, 4);
+    expect(table(d).columnsWidthPercent).toEqual([50, 15, 15, 10, 10]);
+    removeTableColumn(d, T, 4);
+    expect(table(d).columnsWidthPercent).toEqual([50, 15, 15, 20]);
+    removeTableColumn(d, T, 0);
+    expect(table(d).columnsWidthPercent).toEqual([65, 15, 20]);
+    removeTableRow(d, T, 0);
+    expect(table(d).cells).toHaveLength(1);
+    roundtrip(d);
+  });
+
+  it('letzte Zeile entfernen entfernt die Tabelle, umgebende Texte verschmelzen', () => {
+    const d = diagram(textArea('a'));
+    insertTable(d, `${P}/areas/0`, textArea('vor'), textArea('nach'), 1, 1);
+    const focus = removeTableRow(d, T, 0);
+    expect(texts(areas(d))).toEqual(['vor\nnach']);
+    expect(focus).toEqual({ path: `${P}/areas/0`, offset: 3 });
+  });
+
+  it('Absatz unter der Tabelle und Tab in die nächste Zelle', () => {
+    const d = diagram(textArea('a'));
+    insertTable(d, `${P}/areas/0`, textArea('a'), undefined, 2, 1);
+    expect(paragraphBelow(d, T)).toEqual({ path: `${P}/areas/2`, offset: 0 });
+    expect(texts(areas(d))).toEqual(['a', 'table', '']);
+    expect(paragraphBelow(d, T)).toEqual({ path: `${P}/areas/2`, offset: 0 });
+    expect(areas(d)).toHaveLength(3);
+    expect(nextCell(d, T, 0, 0).path).toBe(`${T}/cells/0/1/areas/0`);
+    expect(nextCell(d, T, 0, 1).path).toBe(`${T}/cells/1/0/areas/0`);
+    expect(table(d).cells).toHaveLength(2);
+    expect(tableCellOfPath(`${T}/cells/1/0/areas/0`)).toEqual({ tablePath: T, row: 1, column: 0 });
   });
 });

@@ -113,6 +113,32 @@ function check(name, ok, detail = '') {
   out = await save();
   check('Case-Schritt im leeren Diagramm, Zweig rechts von Sonst', /default_branch\(`Sonst`[\s\S]*case_branch\(`Fall 1`[\s\S]*simple\(2\.1[\s\S]*case_branch\(`Fall 1`[\s\S]*case_branch\(`Fall 2`/.test(out), out.slice(out.indexOf('mainSequence')));
 
+  // ---- Tabellen ----
+  await page.goto(`${BASE}?new`);
+  await page.waitForSelector('.sm-welcome');
+  await page.click('button[title="Einfachen Schritt anlegen"]');
+  await page.click('button[title="Tabelle einfügen"]');
+  await page.fill('input[name=columns]', '2');
+  await page.click('button[value=ok]');
+  await page.waitForSelector('.sm-table');
+  for (const t of ['A1', 'B1', 'A2', 'B2', 'A3']) {
+    await k.type(t);
+    await k.press('Tab');
+  }
+  out = await save();
+  check('Tabelle einfügen, Tab legt in der letzten Zelle eine Zeile an', out.includes('row { cell(`A1`, plain=`A1`) | cell(`B1`, plain=`B1`) }') && out.includes('row { cell(`A3`, plain=`A3`) | cell(``) }\n        }'), out.slice(out.indexOf('mainSequence')));
+  const tb = await (await page.$('.sm-table')).boundingBox();
+  const c1 = await (await page.$$('.sm-table td'))[1].boundingBox();
+  await page.mouse.move(c1.x + 2, tb.y - 3);
+  await page.mouse.down();
+  await page.mouse.up();
+  const r0 = await (await page.$('.sm-table tr')).boundingBox();
+  await page.mouse.move(tb.x - 3, r0.y + r0.height / 2);
+  await page.mouse.down();
+  await page.mouse.up();
+  out = await save();
+  check('Spalte über die Lücke einfügen, Zeile im linken Rand entfernen', out.includes('row { cell(`A2`, plain=`A2`) | cell(``) | cell(`B2`, plain=`B2`) }'), out.slice(out.indexOf('mainSequence')));
+
   check('keine Fehler im Browser', errors.length === 0, errors.join('\n'));
   await browser.close();
   fs.rmSync(tmp, { recursive: true });
