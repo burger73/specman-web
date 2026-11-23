@@ -17,7 +17,7 @@ export function readTextArea(el: HTMLElement): TextAreaContent {
 }
 
 /** Textfassung und Markup-Bereiche (to inklusiv) in einem Durchlauf */
-function plainAndMarkups(root: HTMLElement): { plainText: string; markups: Markup[] } {
+export function plainAndMarkups(root: HTMLElement): { plainText: string; markups: Markup[] } {
   let out = '';
   let pendingSpace = false;
   const ranges = new Map<string, { from: number; to: number; type: MarkupType; changeset?: string }>();
@@ -94,6 +94,10 @@ export function cleanHtml(el: HTMLElement): string {
   // vom Sanitizer eingefügt: <br> in leeren Absätzen
   for (const br of Array.from(root.querySelectorAll('div > br:only-child, p > br:only-child'))) {
     if (br.parentElement!.textContent === '') br.remove();
+  }
+  // leere Formatierungs-Hüllen, z. B. nach dem Teilen am Textende
+  for (const e of Array.from(root.querySelectorAll('span, font, b, i, u, s, strike')).reverse()) {
+    if (e.textContent === '' && !e.querySelector('br, img')) e.remove();
   }
   root.normalize();
   return root.innerHTML;

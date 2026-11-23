@@ -9,6 +9,7 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten) in Arb
     npm test             # Parser-, Reader- und Roundtrip-Tests über test/fixtures
     npm run gen:parser   # Parser aus grammar/SpecmanModel_V002.g4 neu erzeugen (antlr-ng)
     node scripts/shot.cjs <beispiel.nsd> <zoom|Datei> <out.png>   # Screenshot zum Vergleich mit doc/*.png
+    node scripts/e2e-edit.cjs   # Browser-Prüfungen fürs Bearbeiten gegen den laufenden Dev-Server
 
 ## Aufbau
 

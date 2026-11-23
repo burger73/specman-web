@@ -5,7 +5,7 @@ import { writeDiagram } from '../core/writer.ts';
 import { droppedFile, pickFile, saveFile, type OpenedFile } from './files.ts';
 import { currentFocus, restoreFocus } from './focus.ts';
 import { renderDiagram } from './render.ts';
-import { format, installTextInput } from './textinput.ts';
+import { format, installTextInput, toggleList, type TextInputHost } from './textinput.ts';
 import './style.css';
 
 // Beispiele: die Testdateien aus dem Original-Repo
@@ -44,6 +44,8 @@ const redoBtn = button('material/redo', 'Wiederholen (Strg+Y)', () => redo());
 const boldBtn = button('material/format_bold', 'Fett (Strg+B)', () => format(doc?.editor, 'bold'));
 const italicBtn = button('material/format_italic', 'Kursiv (Strg+I)', () => format(doc?.editor, 'italic'));
 const underlineBtn = button('material/format_underlined', 'Unterstrichen (Strg+U)', () => format(doc?.editor, 'underline'));
+const ulBtn = button('material/format_list_bulleted', 'Aufzählung', () => toggleList(textHost, false));
+const olBtn = button('material/format_list_numbered', 'Nummerierte Liste', () => toggleList(textHost, true));
 
 const select = document.createElement('select');
 select.title = 'Beispiele aus dem Original-Repo';
@@ -67,7 +69,7 @@ for (const z of ['Datei', '80', '100', '120', '150']) {
 }
 const status = document.createElement('span');
 status.className = 'app-status';
-bar.append(group(newBtn, openBtn, saveBtn, saveAsBtn), group(undoBtn, redoBtn), group(boldBtn, italicBtn, underlineBtn), select, zoom, status);
+bar.append(group(newBtn, openBtn, saveBtn, saveAsBtn), group(undoBtn, redoBtn), group(boldBtn, italicBtn, underlineBtn, ulBtn, olBtn), select, zoom, status);
 const stage = document.createElement('main');
 stage.className = 'app-stage';
 app.append(bar, stage);
@@ -180,7 +182,22 @@ function afterUndoRedo(focus: Focus | undefined | null): void {
 
 const undo = () => doc && afterUndoRedo(doc.editor.undo(currentFocus()));
 const redo = () => doc && afterUndoRedo(doc.editor.redo(currentFocus()));
-installTextInput(stage, { editor: () => doc?.editor, undo, redo });
+const textHost: TextInputHost = {
+  editor: () => doc?.editor,
+  undo,
+  redo,
+  structural(op) {
+    const editor = doc?.editor;
+    if (!editor) return;
+    try {
+      const focus = editor.apply(op, { focus: currentFocus() });
+      redraw(focus);
+    } catch (e) {
+      alert((e as Error).message);
+    }
+  },
+};
+installTextInput(stage, textHost);
 
 document.addEventListener('keydown', (e) => {
   if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
