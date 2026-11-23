@@ -511,6 +511,15 @@ function check(name, ok, detail = '') {
   check('Änderungsmarkierung bleibt bei Absatzformat und Styles löschen', step1Html(out).startsWith('<h3>') && s1.plain.endsWith('before. neu') && /\(\d+,\d+,Changed,/.test(s1.markups), `${step1Html(out).slice(0, 10)} ${s1.markups}`);
   await page.click('[data-name="toolbar.track.changes"]');
 
+  // Listeneintrag aus der Absatz-Combo, auch mit Auswahl (ParagraphCutter nimmt die Schreibmarke = Ende der Auswahl)
+  await open(REF);
+  await selectWord(S1, 'Every');
+  await paraMenu('Listeneintrag (Aufzählung)');
+  out = await save();
+  await settle();
+  check('die Combo zeigt danach den Listeneintrag', (await comboText('paragraph')) === 'Listeneintrag (Aufzählung)', await comboText('paragraph'));
+  check('Listeneintrag mit ausgewähltem Wort', /simple\(1, 5582897d, [\s\S]*?list\(/.test(out.split('while(2,')[0]), (/simple\(1, [\s\S]{0,300}/.exec(out) || [''])[0]);
+
   // leerer neuer Schritt: Überschrift und tippen
   await open(REF);
   await caret(S1, 'end');

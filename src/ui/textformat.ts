@@ -13,6 +13,7 @@
 // styleWithCSS=false dasselbe wie Swing.
 import type { DiagramEditor } from '../core/editor.ts';
 import { BLOCKS } from './textedit.ts';
+import { locateArea, parentListItem } from '../core/areas.ts';
 import { plainOffset, rangeAt } from './focus.ts';
 import { applyFormat, selectedArea, toggleList, type TextInputHost } from './textinput.ts';
 
@@ -433,6 +434,14 @@ export function createTextGroup(host: TextGroupHost, inline: Record<'bold' | 'it
   function update(): void {
     const at = selectedArea();
     state = at ? textStateAt(at.el, at.range.startContainer) : undefined;
+    // im Listenpunkt zeigt die Combo den Listeneintrag (im Original bleibt die Wahl stehen, weil die Listenaktionen
+    // keinen eigenen Zustand haben und sich der der Block-Aktionen dabei nicht ändert)
+    // (erst bei einer Auswahl nach dem Editor fragen: beim Aufbau der Toolbar gibt es main.ts' doc noch nicht)
+    const d = state && at ? editor()?.diagram : undefined;
+    if (state && at && d) {
+      const li = parentListItem(d, locateArea(d, at.el.dataset.path!).containerPath);
+      if (li) state.block = li.item.ordered ? 'OL' : 'UL';
+    }
     // die Combo behält ihren Eintrag, wenn keiner passt (setSelected wird dann für keinen gerufen)
     if (state?.block) paragraph.textContent = PARAGRAPH_TYPES.find((p) => p.tag === state!.block)!.label;
     else if (!paragraph.textContent) paragraph.textContent = PARAGRAPH_TYPES[0].label;

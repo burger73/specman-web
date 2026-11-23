@@ -41,7 +41,7 @@ Schritt fortschreiben oder löschen.
 
 - `npm test` (Vitest, 159 Tests), `npx tsc --noEmit -p .`
 - gegen den Dev-Server (systemd-User-Service `specman-web-dev`, nur auf `http://100.101.105.4:5180/`):
-  `node scripts/e2e-edit.cjs` (17), `node scripts/e2e-changes.cjs` (32), `node scripts/e2e-phase3.cjs` (91)
+  `node scripts/e2e-edit.cjs` (17), `node scripts/e2e-changes.cjs` (32), `node scripts/e2e-phase3.cjs` (93)
 - `scripts/probe-areas.cjs [datei.nsd]` listet die Bereiche mit Lage, `scripts/shot*.cjs` machen Screenshots
   (`shot-textformat.cjs` zeigt die Toolbar mit offenem Menü).
 - Testdatei mit allen Elementen: `test/fixtures/specman-reference-v1.4-model-v2.nsd` (Vorschau:

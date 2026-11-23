@@ -150,7 +150,9 @@ html { scroll-padding-top: calc(var(--app-bar-h, 41px) + 8px); }
 .app-status { color: #666; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .app-stage { padding: 12px 20px 40px; }
 body.app-drop .app-stage { outline: 3px dashed #3d5aa8; outline-offset: -8px; }
-.app-group { display: flex; gap: 2px; padding-right: 8px; border-right: 1px solid #ddd; }
+.app-group { display: flex; flex-direction: column; gap: 2px; padding-right: 8px; border-right: 1px solid #ddd; min-width: 0; }
+.app-row { display: flex; gap: 2px; align-items: center; min-height: 28px; }
+.app-group:last-child { flex: 1; border-right: none; }
 .app-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: none; cursor: pointer; }
 .app-btn img { width: 20px; height: 20px; }
 .app-btn:hover:not(:disabled) { background: #e8e8e8; border-color: #ccc; }

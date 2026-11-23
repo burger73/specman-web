@@ -13,6 +13,13 @@ export function caretIn(el: HTMLElement): { node: Node; offset: number } | undef
   return { node: sel.focusNode!, offset: sel.focusOffset };
 }
 
+/** Schreibmarke auch bei einer Auswahl: deren bewegliches Ende (Swings caret dot, getWrappedCaretPosition) */
+function focusIn(el: HTMLElement): { node: Node; offset: number } | undefined {
+  const sel = document.getSelection();
+  if (!sel || sel.rangeCount === 0 || !el.contains(sel.focusNode)) return undefined;
+  return { node: sel.focusNode!, offset: sel.focusOffset };
+}
+
 function areaOf(frag: DocumentFragment): TextEditArea {
   const div = document.createElement('div');
   div.append(frag);
@@ -40,7 +47,7 @@ export function splitAtCaret(el: HTMLElement): { before: TextEditArea; after: Te
  * Absätze sind die Blöcke auf oberster Ebene; Inline-Inhalt dazwischen bildet Absätze, die ein <br> beendet.
  */
 export function cutParagraph(el: HTMLElement): { leading: TextEditArea; caret: TextEditArea; trailing: TextEditArea | undefined; offset: number } | undefined {
-  const caret = caretIn(el);
+  const caret = focusIn(el);
   if (!caret) return undefined;
   // oberste Ebene, in der der Cursor liegt
   let top: Node | null;

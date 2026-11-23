@@ -108,6 +108,11 @@ unterstrichen folgen der Schreibmarke, das Größenmenü markiert die Größe an
 zeigt wie im Original die zuletzt gewählte Schrift. Nicht Teil von 3.5: das Menü Format (Schrift-Dialog, Stil-Untermenü,
 Tabellen-Menü), weil Specman Web keine Menüleiste hat.
 
+Nach Markus' Test: „Listeneintrag“ aus der Absatz-Combo wirkt jetzt auch mit einer Auswahl (wie `ParagraphCutter`, der
+die Schreibmarke nimmt, also das Ende der Auswahl; galt auch für die Listenknöpfe), und die Combo zeigt im Listenpunkt
+den Listeneintrag. Die Toolbar-Gruppen sind jetzt wie im Original zweizeilig (`ToolbarGroup.nextRow`,
+`addControlsInTwoRows`), auf schmalen Fenstern brechen ganze Gruppen um.
+
 ### 3.6 Einfüge-Werkzeuge (SHEF Insert-Gruppe)
 
 Bisher portiert: Bild, Tabelle. Im Original stehen außerdem:

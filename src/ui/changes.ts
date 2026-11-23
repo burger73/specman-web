@@ -116,7 +116,14 @@ export function createChangesGroup(host: ChangesHost): ChangesGroup {
   });
   review.dataset.name = 'toolbar.review';
 
-  group.append(csBtn, track, accept, reject, merge, review);
+  // wie DiagramToolBar: Change Set oben, die Knöpfe darunter
+  const row = (...items: HTMLElement[]) => {
+    const r = document.createElement('div');
+    r.className = 'app-row';
+    r.append(...items);
+    return r;
+  };
+  group.append(row(csBtn), row(track, accept, reject, merge, review));
 
   function update(): void {
     const d = host.editor()?.diagram;

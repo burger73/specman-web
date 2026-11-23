@@ -42,10 +42,16 @@ function button(icon: string, title: string, onClick: () => void): HTMLButtonEle
   return b;
 }
 
-function group(...items: HTMLElement[]): HTMLElement {
+/** Toolbar-Gruppe mit zwei Zeilen wie im Original (ToolbarGroup.nextRow, addControlsInTwoRows) */
+function group(top: HTMLElement[], bottom: HTMLElement[] = []): HTMLElement {
   const g = document.createElement('div');
   g.className = 'app-group';
-  g.append(...items);
+  for (const items of [top, bottom]) {
+    const r = document.createElement('div');
+    r.className = 'app-row';
+    r.append(...items);
+    g.append(r);
+  }
   return g;
 }
 
@@ -110,7 +116,17 @@ for (const z of ['Datei', '80', '100', '120', '150']) {
 }
 const status = document.createElement('span');
 status.className = 'app-status';
-bar.append(group(newBtn, openBtn, saveBtn, saveAsBtn), group(undoBtn, redoBtn), group(...textGroup.head, boldBtn, italicBtn, underlineBtn, ...textGroup.tail), group(ulBtn, olBtn, imageBtn, tableBtn, steplinkBtn), group(toneBtn, deleteBtn, borderBtn), group(collapseAllBtn, expandAllBtn), changes.element, select, zoom, status);
+bar.append(
+  group([newBtn, openBtn, saveBtn, saveAsBtn], [undoBtn, redoBtn]),
+  // Text: Absatz und Schrift oben, Größe, Farbe, Zeichenformate und Ausrichtung darunter (TEXT_FIRST_ROW_SIZE = 2)
+  group(textGroup.head.slice(0, 2), [...textGroup.head.slice(2), boldBtn, italicBtn, underlineBtn, ...textGroup.tail]),
+  // Einfügen: Listen oben, Bild, Tabelle und Schrittverweis darunter (im Original steht oben noch der Hyperlink)
+  group([ulBtn, olBtn], [imageBtn, tableBtn, steplinkBtn]),
+  group([toneBtn, deleteBtn], [borderBtn]),
+  changes.element,
+  group([zoom], [collapseAllBtn, expandAllBtn]),
+  group([select], [status]),
+);
 const stage = document.createElement('main');
 stage.className = 'app-stage';
 const body = document.createElement('div');
