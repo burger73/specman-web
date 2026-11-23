@@ -166,9 +166,14 @@ body.app-drop .app-stage { outline: 3px dashed #3d5aa8; outline-offset: -8px; }
 /* ---- Schrittpalette (StepButtonBar) ---- */
 .app-body { display: flex; align-items: flex-start; }
 .app-body > .app-stage { flex: 1; min-width: 0; }
-.app-palette { position: sticky; top: 41px; display: flex; flex-direction: column; gap: 1px; padding: 8px 4px; background: #fff; border-right: 1px solid #ddd; min-height: calc(100vh - 57px); }
-.app-palette-btn { display: flex; align-items: center; gap: 6px; padding: 3px 8px 3px 4px; border: 1px solid transparent; border-radius: 4px; background: none; font: 12px system-ui, sans-serif; text-align: left; white-space: nowrap; cursor: pointer; }
-.app-palette-btn img { width: 22px; height: 22px; }
+.app-palette { position: sticky; top: 41px; flex: none; box-sizing: border-box; display: flex; flex-direction: column; gap: 1px; padding: 8px 4px; background: #fff; border-right: 1px solid #ddd; min-height: calc(100vh - 57px); }
+.app-palette-btn { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; padding: 3px 8px 3px 4px; border: 1px solid transparent; border-radius: 4px; background: none; font: 12px system-ui, sans-serif; text-align: left; white-space: nowrap; cursor: pointer; }
+.app-palette-btn img { width: 22px; height: 22px; flex: none; }
+.app-palette-btn span { overflow: hidden; text-overflow: ellipsis; }
+/* Ziehgriff am rechten Rand (neu, nicht im Original) */
+.app-palette-grip { position: absolute; top: 0; right: -4px; bottom: 0; width: 7px; cursor: col-resize; z-index: 5; touch-action: none; }
+.app-palette-grip:hover { background: rgba(61, 90, 168, 0.25); }
+body.app-col-resize, body.app-col-resize * { cursor: col-resize !important; user-select: none; }
 .app-palette-btn:hover { background: #eef; border-color: #ccd; }
 
 /* ---- Tabellen bearbeiten (TableEditArea: Rand BORDER_THICKNESS 7 für die Auswahl) ---- */

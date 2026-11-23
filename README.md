@@ -1,7 +1,7 @@
 # Specman Web
 
 Portierung von [Specman](https://github.com/j-specman/specman) (Java/Swing-Editor für Use-Case-Abläufe als
-Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Änderungsverfolgung) abgeschlossen, siehe `PLAN-phase1.md`. Phase 2 (Änderungsverfolgung, Catch-Sequenzen) umgesetzt, siehe `PLAN-phase2.md`.
+Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Änderungsverfolgung) abgeschlossen, siehe `PLAN-phase1.md`. Phase 2 (Änderungsverfolgung, Catch-Sequenzen) abgeschlossen, siehe `PLAN-phase2.md`. Phase 3 (Lücken) in Arbeit, siehe `PLAN-phase3.md`.
 
 ## Befehle
 
@@ -11,6 +11,7 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Ä
     node scripts/shot.cjs <beispiel.nsd> <zoom|Datei> <out.png>   # Screenshot zum Vergleich mit doc/*.png
     node scripts/e2e-edit.cjs   # Browser-Prüfungen fürs Bearbeiten gegen den laufenden Dev-Server
     node scripts/e2e-changes.cjs   # Browser-Prüfungen der Änderungsverfolgung
+    node scripts/e2e-phase3.cjs   # Browser-Prüfungen der Phase 3
 
 ## Aufbau
 
@@ -54,6 +55,9 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Ä
   gibt manche nur auf der Konsole aus (Sonst-Zweig, mindestens zwei Fälle).
 - Bilder: Rastergrafiken werden wie im Original als PNG gespeichert (Umwandlung über ein Canvas), SVG-Dateien als
   Vektorgrafik. Kopieren und Ausschneiden von Bildern fehlt noch (Zwischenablage kommt später).
+- Schrittpalette: Neu und nicht im Original lässt sich die Breite am rechten Rand ziehen (36–300 px). Ist sie
+  schmaler als die Beschriftungen, werden diese abgeschnitten, bis nur die Icons bleiben. Den Knopf zum Ein- und
+  Ausblenden der Beschriftungen (`StepButtonBar.toggleShowText`) gibt es dafür nicht, die Breite wird nicht gemerkt.
 - Reader: Die Zusatz-Areas eines Listenpunkts behalten ihre Reihenfolge (Java sortiert nach Text/Tabelle/Bild).
 - Writer: schreibt standardmäßig Version 1.4.0 ins Envelope, beim Roundtrip die Version der gelesenen Datei.
 - Nicht in Phase 0: Bearbeiten, PDF-Export, PlantUML-Rendering (Platzhalter mit Quelltext), JSON-Format v1.

@@ -36,7 +36,43 @@ export function createPalette(host: PaletteHost): HTMLElement {
   }
   bar.append(paletteButton('step-catch', 'Catch-Block', 'Catch-Block anlegen', () => openCatchDialog(host)));
   bar.append(paletteButton('step-case-branch', 'Case-Zweig', 'Case-Zweig anlegen', () => addBranch(host)));
+  bar.append(resizeGrip(bar));
   return bar;
+}
+
+/** Breite der Palette (neu, nicht im Original): schmaler als die Beschriftungen schneidet diese ab, bis nur die Icons bleiben */
+export const PALETTE_MIN_WIDTH = 36;
+export const PALETTE_MAX_WIDTH = 300;
+
+export function clampPaletteWidth(w: number): number {
+  return Math.round(Math.min(PALETTE_MAX_WIDTH, Math.max(PALETTE_MIN_WIDTH, w)));
+}
+
+function resizeGrip(bar: HTMLElement): HTMLElement {
+  const grip = document.createElement('div');
+  grip.className = 'app-palette-grip';
+  grip.title = 'Breite ziehen';
+  grip.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = bar.getBoundingClientRect().width;
+    grip.setPointerCapture(e.pointerId);
+    document.body.classList.add('app-col-resize');
+    const move = (ev: PointerEvent) => {
+      bar.style.width = `${clampPaletteWidth(startW + ev.clientX - startX)}px`;
+    };
+    const up = () => {
+      grip.removeEventListener('pointermove', move);
+      grip.removeEventListener('pointerup', up);
+      grip.removeEventListener('pointercancel', up);
+      document.body.classList.remove('app-col-resize');
+    };
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('pointerup', up);
+    grip.addEventListener('pointercancel', up);
+  });
+  return grip;
 }
 
 function paletteButton(icon: string, label: string, title: string, onClick: () => void): HTMLButtonElement {
