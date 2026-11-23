@@ -67,6 +67,17 @@ ergibt sich aus den Zeilenrechtecken des Texts.
 - Klick auf einen Verweis springt zum Schritt (`TextEditArea.scrollToStepnumber`), ein defekter Verweis meldet sich.
   Das fehlt bisher ganz.
 
+**Umgesetzt (3.4):** `ui/steplinkdialog.ts`, Hilfen im Kern in `core/steplinks.ts` (`stepChoices`, `filterStepChoices`,
+`stepIdByNumber`). Die Klassen stehen im Original im SHEF-Paket `net.atlanticbb.tantlinger.ui.text.actions`. Knopf
+„Link auf Schrittnummer...“ (Icon `jump_to_element`) hinter Tabelle und Bild. Der Dialog listet wie
+`Specman.listAllSteps` alle Schritte samt Catch-Sequenzen, nach Nummer sortiert (`StepNumber.compareTo`), als
+„Nummer - Text“ gekürzt auf 60 Zeichen. Der Filter sucht im ganzen Text ohne Rücksicht auf Groß-/Kleinschreibung.
+Ein Klick fügt ein, Schließen oder Enter brechen ab. Eingefügt wird an der Schreibmarke mit dem Format davor, steht
+dort schon ein Verweis, kommt ein Leerzeichen dazwischen; mit Verfolgung als `ChangedSteplink` des Sets. Das ist ein
+Undo-Schritt. Strg+Klick auf einen Verweis setzt die Schreibmarke an den Anfang des Zielschritts
+(`EditContainer.scrollTo`), ein defekter Verweis („?“) meldet „Springen nicht möglich“. Mit gedrückter Strg-Taste
+zeigt der Mauszeiger über Verweisen eine Hand, der Tooltip lautet „STRG+Klicken, um dem Link zu folgen“.
+
 ### 3.5 Text-Werkzeuge der Toolbar (SHEF `HTMLEditorPane.createToolbarComponents`)
 
 Bisher portiert: fett, kursiv, unterstrichen, Listen. Im Original stehen außerdem:

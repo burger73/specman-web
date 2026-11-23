@@ -68,6 +68,9 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Ä
   anderen Bereich, solange die Spalte gemerkt ist, setzt Specman Web sie zeilenweise auf diese Spalte (in Swing gilt
   die magic caret position für jede Hoch/Runter-Bewegung). Strg+Alt+Links/Rechts (Blättern im Bearbeitungsverlauf)
   ist bewusst nicht portiert: Das Original scrollt dabei nur, und viele Desktops belegen die Kombination selbst.
+- Schrittverweise: Strg+Klick folgt dem Verweis unter dem Mauszeiger; das Original prüft das Zeichen hinter der
+  Schreibmarke, die der Klick gerade gesetzt hat. Wenn der Dialog den Verweis einfügt, rutscht die Schreibmarke aus
+  einem bestehenden Verweis heraus hinter diesen, damit zwei Verweise nicht verschmelzen.
 - Reader: Die Zusatz-Areas eines Listenpunkts behalten ihre Reihenfolge (Java sortiert nach Text/Tabelle/Bild).
 - Writer: schreibt standardmäßig Version 1.4.0 ins Envelope, beim Roundtrip die Version der gelesenen Datei.
 - Nicht in Phase 0: Bearbeiten, PDF-Export, PlantUML-Rendering (Platzhalter mit Quelltext), JSON-Format v1.

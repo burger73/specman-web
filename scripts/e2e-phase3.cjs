@@ -309,6 +309,88 @@ function check(name, ok, detail = '') {
   out = await save();
   check('Pfeiltasten ändern nichts am Dokument', out === fixture(REF));
 
+  // ---- 3.4 Schrittverweise anlegen und folgen ----
+  await open(REF);
+  const S1 = `${M}0/content/areas/0`;
+  const linkBtn = 'button[title="Link auf Schrittnummer..."]';
+  const choose = (re) => page.locator('.app-steplink-dialog .app-catch-item', { hasText: re }).first().click();
+  /** Klartext und Markups des Schritts 1 in der gespeicherten Datei */
+  const step1 = (text) => {
+    const m = /simple\(1, 5582897d,[\s\S]*?plain=`([^`]*)`(?:, markups=\[([^\]]*)\])?/.exec(text);
+    return { plain: m?.[1] ?? '', markups: m?.[2] ?? '' };
+  };
+  await caret(S1, 'end');
+  await page.click(linkBtn);
+  check('der Dialog geht auf, der Filter hat den Fokus', await page.$eval('.app-steplink-dialog', (d) => d.open && document.activeElement?.classList.contains('app-steplink-filter')));
+  const items = await page.$$eval('.app-steplink-dialog .app-catch-item', (b) => b.map((x) => x.textContent));
+  check('alle Schritte nach Nummer, mit Text, höchstens 60 Zeichen', items[0].startsWith('1 - Simple step') && items.some((t) => t.startsWith('10.1 - ')) && items.every((t) => t.length <= 60), items.slice(0, 3).join(' | '));
+  await choose(/^4 - /);
+  out = await save();
+  let s1 = step1(out);
+  check('Verweis am Cursor eingefügt', s1.plain.endsWith('number sequence.4') || /4$/.test(s1.plain), s1.plain.slice(-40));
+  check('als Steplink-Markup über der Nummer', s1.markups === `(${s1.plain.length - 1},${s1.plain.length - 1},Steplink)`, s1.markups);
+  check('Tooltip am Verweis', (await page.$eval(`[data-path="${S1}"] .sm-markup-Steplink`, (s) => s.title)) === 'STRG+Klicken, um dem Link zu folgen');
+  check('Schreibmarke hinter dem Verweis', (await where()) === S1);
+  await page.click(linkBtn);
+  await choose(/^2 - /);
+  s1 = step1(await save());
+  check('zweiter Verweis direkt dahinter: mit Leerzeichen getrennt', s1.plain.endsWith('4 2') && s1.markups.split(')(').length === 2, `${s1.plain.slice(-10)} ${s1.markups}`);
+  await k.press('Control+z');
+  await k.press('Control+z');
+  check('Undo nimmt beide Verweise zurück', (await save()) === fixture(REF));
+
+  // mit Verfolgung
+  await page.click('[data-name="toolbar.track.changes"]');
+  await caret(S1, 'end');
+  await page.click(linkBtn);
+  await choose(/^4 - /);
+  s1 = step1(await save());
+  check('mit Verfolgung als ChangedSteplink des Sets', /,ChangedSteplink,yellow\)$/.test(s1.markups) || /ChangedSteplink, ?yellow/.test(s1.markups), s1.markups);
+  await k.press('Control+z');
+  await page.click('[data-name="toolbar.track.changes"]');
+
+  // Filter und Schließen
+  await caret(S1, 'end');
+  await page.click(linkBtn);
+  await page.fill('.app-steplink-filter', 'WHILE');
+  const filtered = await page.$$eval('.app-steplink-dialog .app-catch-item', (b) => b.map((x) => x.textContent));
+  // gefiltert wird wie im Original über den ganzen Text des Schritts, nicht nur über die angezeigten 60 Zeichen
+  check('Filter ohne Groß-/Kleinschreibung', filtered.length < items.length && filtered.some((t) => t.startsWith('2 - While loop')) && !filtered.some((t) => t.startsWith('1 - ')), filtered.join(' | '));
+  await k.press('Enter');
+  // das close-Ereignis des Dialogs kommt asynchron, erst danach ist er entfernt
+  const gone = await page.waitForSelector('.app-steplink-dialog', { state: 'detached', timeout: 2000 }).then(() => true, () => false);
+  out = await save();
+  check('Enter schließt ohne Einfügen', gone && out === fixture(REF), `geschlossen: ${gone}, ${step1(out).plain.slice(-20)} | ${(out.match(/changeModeEnabled=\w+/) || [])[0]}`);
+
+  // Strg+Klick folgt dem Verweis
+  const catchLink = `[data-path="mainSequence/catchArea/catchSequences/0/steps/0/content/areas/0"] .sm-markup-Steplink`;
+  await page.$eval(catchLink, (s) => s.scrollIntoView({ block: 'center' }));
+  await k.down('Control');
+  check('Handzeiger mit Strg', (await page.$eval(catchLink, (s) => getComputedStyle(s).cursor)) === 'pointer');
+  await page.click(catchLink);
+  await k.up('Control');
+  check('Strg+Klick springt zum Schritt 10', (at = await where()) === `${M}9/content/areas/0`, at);
+  const visible = await page.$eval(`[data-path="${M}9/content/areas/0"]`, (e) => {
+    const r = e.getBoundingClientRect();
+    return r.top >= 0 && r.bottom <= innerHeight;
+  });
+  check('der Schritt ist zu sehen', visible);
+
+  // defekter Verweis: Ziel gelöscht
+  await caret(S1, 'end');
+  await page.click(linkBtn);
+  await choose(/^5 - /);
+  await caret(`${M}4/content/areas/0`, 'end');
+  await page.click('button[title="Schritt löschen"]');
+  dialogs.length = 0; // Rückfrage wegen des Verweises
+  out = await save();
+  check('Verweis auf gelöschten Schritt wird defekt', step1(out).plain.endsWith('5?'), step1(out).plain.slice(-10));
+  const s1Link = `[data-path="${S1}"] .sm-markup-Steplink`;
+  await page.$eval(s1Link, (s) => s.scrollIntoView({ block: 'center' }));
+  await page.click(s1Link, { modifiers: ['Control'] });
+  check('Strg+Klick auf defekten Verweis meldet sich', dialogs.length === 1 && dialogs[0].startsWith('Springen nicht möglich'), JSON.stringify(dialogs));
+  dialogs.length = 0;
+
   check('keine Dialoge unerwartet', dialogs.length === 0, JSON.stringify(dialogs));
   check('keine Fehler im Browser', errors.length === 0, errors.join('\n'));
   await browser.close();

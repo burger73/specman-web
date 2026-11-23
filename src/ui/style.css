@@ -225,3 +225,11 @@ body.app-col-resize, body.app-col-resize * { cursor: url('/cursors/left-right-cu
 .app-catch-list { display: flex; flex-direction: column; min-height: 40px; border: 1px solid #000; margin: 10px; }
 .app-catch-item { padding: 3px 6px; border: none; background: #fff; font: 13px system-ui, sans-serif; text-align: left; cursor: pointer; }
 .app-catch-item:hover { background: #d3d3d3; }
+
+/* Schrittverweise: Handzeiger bei gedrückter Strg-Taste, Auswahldialog mit Filter */
+.app-ctrl .sm-markup-Steplink, .app-ctrl .sm-markup-ChangedSteplink { cursor: pointer; }
+.app-steplink-dialog { width: max-content; min-width: 400px; min-height: 600px; box-sizing: border-box; display: flex; flex-direction: column; }
+.app-steplink-dialog:not([open]) { display: none; }
+.app-steplink-dialog .app-catch-list { flex: 1; overflow-y: auto; max-height: 60vh; }
+.app-steplink-filter { width: auto !important; margin: 0 10px; }
+.app-steplink-dialog .app-catch-item { white-space: pre; }

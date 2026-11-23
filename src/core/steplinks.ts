@@ -150,3 +150,57 @@ export function mapPlainToHtml(html: string, plain: string): ({ start: number; e
   }
   return result;
 }
+
+// ---- Schrittverweise anlegen und folgen (StepnumberLinkPanel, TextEditArea.addStepnumberLink/scrollToStepnumber) ----
+
+/** Eintrag der Schrittauswahl: AbstractSchrittView.toString, also Nummer und Klartext des Schritts */
+export interface StepChoice {
+  id: string;
+  number: string;
+  label: string;
+}
+
+/** EditContainer.getPlainText: Klartexte der Areas ohne leere, mit Zeilenumbruch verbunden (Tabellen, Bilder: leer) */
+function contentPlainText(c: EditorContent): string {
+  return c.areas
+    .map((a) => (a.kind === 'text' ? a.plainText : a.kind === 'listItem' ? contentPlainText(a.content) : ''))
+    .filter((t) => t !== '')
+    .join('\n');
+}
+
+/** StepNumber.compareTo: Teilnummern numerisch, bei gleichem Anfang die kürzere zuerst */
+export function compareStepNumbers(a: string, b: string): number {
+  const x = a.split('.').map(Number);
+  const y = b.split('.').map(Number);
+  for (let i = 0; i < Math.min(x.length, y.length); i++) if (x[i] !== y[i]) return x[i] - y[i];
+  return x.length - y.length;
+}
+
+/** Specman.listAllSteps (alle Schritte einschließlich der Catch-Sequenzen), nach Nummer sortiert */
+export function stepChoices(d: Diagram): StepChoice[] {
+  const out: StepChoice[] = [];
+  const walk = (seq: StepSequence) => {
+    for (const s of seq.steps) {
+      out.push({ id: s.id, number: s.stepNumber, label: `${s.stepNumber} - ${contentPlainText(s.content)}` });
+      childSequences(s).forEach(walk);
+    }
+    seq.catchArea?.catchSequences.forEach(walk);
+  };
+  walk(d.mainSequence);
+  return out.sort((a, b) => compareStepNumbers(a.number, b.number));
+}
+
+/** StepnumberLinkPanel.filterSteps: ohne Filtertext alle, sonst die mit dem Text (ohne Groß-/Kleinschreibung) */
+export function filterStepChoices(choices: StepChoice[], text: string): StepChoice[] {
+  if (text.trim() === '') return choices;
+  return choices.filter((c) => c.label.toLowerCase().includes(text.toLowerCase()));
+}
+
+/** Specman.findStepByStepID: Schritt-ID zur Nummer eines Verweises; undefined, wenn es keinen solchen Schritt gibt */
+export function stepIdByNumber(d: Diagram, number: string): string | undefined {
+  for (const [id, n] of stepNumbersById(d)) if (n === number) return id;
+  return undefined;
+}
+
+/** StepnumberLink.isStepnumberLinkDefect */
+export const isSteplinkDefect = (number: string) => number.endsWith(STEPNUMBER_DEFECT_MARK);

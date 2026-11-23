@@ -82,6 +82,8 @@ function wrap(start: Pos, end: Pos, color: string, m: Markup, index: number): vo
     s.dataset.markup = String(index);
     s.dataset.type = m.type;
     if (m.changeset !== undefined) s.dataset.changeset = m.changeset;
+    // BreakCatchScrollMouseAdapter.SCROLL_TOOLTIP
+    if (m.type === 'Steplink' || m.type === 'ChangedSteplink') s.title = 'STRG+Klicken, um dem Link zu folgen';
     s.style.backgroundColor = color;
     target.replaceWith(s);
     s.append(target);
