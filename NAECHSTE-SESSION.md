@@ -46,7 +46,7 @@ Aus dem PLAN: Absatzformat (Absatz, Überschrift 1–6 …), Schriftart, Schrift
   (`FontFamily.ALL_FONTS`), Schriftgrößen-Knopf mit Popup, `HTMLFontColorAction`, B/I/U, die Ausrichtungen aus
   `HTMLEditorActionFactory.createAlignActionList()`; die Reihenfolge der Knöpfe dort ablesen.
 - Im Repo als Quelltext: `…/ui/text/actions/SpecmanHTMLFontAction.java`, `SpecmanFontSizeAction(Factory).java`,
-  `HTMLBlockActionWithMarkupRecovery.java`, außerdem `specman`-seitig `FontFamily`.
+  `HTMLBlockActionWithMarkupRecovery.java`; `FontFamily` steht in `…/ui/text/dialogs/SpecmanHTMLFontDialog.java`.
 - **Nur kompiliert:** `HTMLFontColorAction`, `HTMLAlignAction`, `HTMLBlockAction`, `HTMLInlineAction`,
   `ClearStylesAction` stecken in der SHEF-Bibliothek
   `~/specman-orig/local-maven-repository/net/attlanticbb/shef/0.5.0/shef-0.5.0.jar` (nur `.class`). Auf dem NUC ist
