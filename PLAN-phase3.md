@@ -1,6 +1,6 @@
 # Phase 3: Lücken aus Phase 1 und 2
 
-**Entwurf vom 23.11.2026, noch nicht mit Markus abgestimmt.** Grundlage ist Phase 2 (Commits 2.1–2.6 auf main).
+Abgestimmt mit Markus am 23.11.2026. Grundlage ist Phase 2 (Commits 2.1–2.6 auf main).
 Auf Markus' Wunsch kommen die Lücken vor PDF/PlantUML. Die Phasen verschieben sich dadurch:
 
 | Phase | Inhalt |
@@ -9,22 +9,20 @@ Auf Markus' Wunsch kommen die Lücken vor PDF/PlantUML. Die Phasen verschieben s
 | 2 | Änderungsverfolgung, Catch-Sequenzen |
 | **3** | **Lücken aus Phase 1 und 2, Schrittpalette in der Breite ziehbar** |
 | 4 | PDF-Export, PlantUML (rendern und bearbeiten) |
-| später | Drag & Drop, Morphing, Metatag-Verwaltung, Suchen/Ersetzen (falls nicht in Phase 3 vorgezogen, siehe Fragen) |
+| später | Drag & Drop, Morphing, Metatags konfigurieren und per Ziehen umsortieren, Suchen/Ersetzen |
 
 Vorgehen wie bisher: Java gezielt lesen, Bedienung nach dem *Code* des Originals. Kleine Commits 3.1, 3.2, … mit
 Vitest-Tests und Browser-Prüfungen (`scripts/e2e-*.cjs`). Abweichungen kommen ins README.
 
 ## Inhalt
 
-### 3.1 Schrittpalette links: Breite ziehen (neu) und Beschriftung ein/aus (Original)
+### 3.1 Schrittpalette links: Breite ziehen (neu)
 
 - **Neu, nicht im Original:** Der rechte Rand der Palette lässt sich mit der Maus ziehen. Ist sie schmaler als die
   Beschriftungen, werden diese abgeschnitten, bis schließlich nur noch die Icons bleiben. Mindestbreite: Icons
-  (ca. 34 px), Höchstbreite ca. 300 px. Die Breite merkt sich der Browser (`localStorage`). Das kommt als Abweichung
-  ins README.
-- **Original (`StepButtonBar.toggleShowText`):** Unten in der Palette sitzt ein Knopf, der die Beschriftungen ein- und
-  ausblendet (Preference `stepButtonBarShowText`). Ohne Beschriftung steht der Text als Tooltip da.
-- Doppelklick auf den Ziehrand stellt die Standardbreite wieder her (neu).
+  (ca. 34 px), Höchstbreite ca. 300 px. Das kommt als Abweichung ins README.
+- Nicht dabei (Markus, 23.11.2026): der Original-Knopf zum Ein-/Ausblenden der Beschriftungen
+  (`StepButtonBar.toggleShowText`) und das Merken der Breite.
 
 ### 3.2 Spaltenbreiten ziehen (`SpaltenResizer`, `UndoableSpaltenbreiteAngepasst`)
 
@@ -90,15 +88,17 @@ Das Original hat am Schrittnummern-Label ein Kontextmenü, das bisher ganz fehlt
 - Co-Catch nach oben/unten (`CatchBereich.moveCoCatchUp/DownUDBL`)
 - flache Nummerierung einer Subsequenz an/aus (`flatNumbering`)
 - Link auf den Schritt kopieren (`CopyStepLinkMenuItem`, Specman-URL mit Schritt-ID)
-- Kopieren, Ausschneiden, Einfügen von Schritten → siehe Frage 2
-- Tags zuweisen und konfigurieren → siehe Frage 3
+- Kopieren, Ausschneiden, Einfügen von Schritten (`CopyStepOp`, `CutStepOp`, `PasteStepsOp`): eingefügt wird hinter dem
+  Schritt. Neue IDs, Schrittverweise und Nummern werden nachgezogen. Beim Ausschneiden eines Schritts, dessen
+  Break-Schritte außerhalb gefangen werden, kommt die Rückfrage `msg.cut.external.catches`. Mit Verfolgung ist
+  Ausschneiden ein Markieren und Eingefügtes hinzugefügt (`InternalPasteChangemarksAdjuster`, gemeinsam mit 3.7).
+  Kopiert wird auch als Text bzw. HTML für andere Programme (Original prüfen).
+- Tags: Untermenü mit den konfigurierten Tags zum Zuweisen (schon vorhandene gesperrt). Dazu am Tag selbst den
+  Freitext per Klick bearbeiten (`GenericMetaTag`, `NoteEditorPopup`) und das Tag-Kontextmenü
+  (`MetaTagContextMenu`: Bearbeiten, links/rechts, Löschen). Nicht dabei: „Tags konfigurieren…“ (Konfigurationsdialog)
+  und Umsortieren per Ziehen, beides kommt mit der Metatag-Verwaltung später. Der Menüpunkt fehlt solange.
 
-### 3.9 Altes Dateiformat v1 lesen (`model/v001`, `ModelConverterV001V002`)
-
-Dateien mit `modelType … v001` (JSON) beim Öffnen nach V2 umwandeln, gespeichert wird immer V2. Testmaterial im
-Original-Repo: `specman-reference-v1.2-model-v1.nsd`, Schema `specman-schema-v1.2-model-v1.json`.
-
-### 3.10 Rest aus Phase 2
+### 3.9 Rest aus Phase 2
 
 - Komposition (Tottasten, IME) robuster markieren, soweit am Desktop machbar
 - Tag `phase-2` setzen, sobald Markus Phase 2 abgenommen hat
@@ -112,20 +112,18 @@ Original-Repo: `specman-reference-v1.2-model-v1.nsd`, Schema `specman-schema-v1.
 5. 3.5 Text-Werkzeuge
 6. 3.6 Einfüge-Werkzeuge
 7. 3.7 Zwischenablage Bilder/Tabellen
-8. 3.8 Kontextmenü (ohne bzw. mit Schritt-Zwischenablage, je nach Frage 2)
-9. 3.9 Format v1
+8. 3.8 Kontextmenü: Löschen, Verschieben, flache Nummerierung, Link kopieren
+9. 3.8 Kontextmenü: Schritte kopieren, ausschneiden, einfügen
+10. 3.8 Kontextmenü: Tags zuweisen, Freitext, Tag-Kontextmenü
 
-## Offene Fragen an Markus
+## Entschieden (Markus, 23.11.2026)
 
-1. **Text-Werkzeuge (3.5):** alle wie im Original (auch Schriftart und Schriftfarbe), oder nur Absatzformat, Größe und
-   Ausrichtung?
-2. **Schritte kopieren/ausschneiden/einfügen:** Das steht im Kontextmenü (3.8) und war bisher für „später“ geplant. Gleich
-   in Phase 3 mitnehmen? Die Änderungsmarkierungen beim Einfügen teilt es sich mit 3.7.
-3. **Tags im Kontextmenü:** Zuweisen und konfigurieren ist die Metatag-Verwaltung („später“). In Phase 3 nur zuweisen,
-   alles oder gar nicht?
-4. **Format v1 (3.9):** Gibt es bei dir noch v1-Dateien? Sonst würde ich es streichen bzw. ans Ende schieben.
-5. **Palette (3.1):** Passt Ziehen plus der Original-Knopf für die Beschriftung, und soll die Breite pro Browser
-   gespeichert werden?
+1. Text-Werkzeuge (3.5) vollständig wie im Original, also auch Schriftart und Schriftfarbe.
+2. Schritte kopieren, ausschneiden und einfügen kommt mit in Phase 3 (3.8).
+3. Tags im Kontextmenü: Die Entscheidung hat Markus mir überlassen. Zuweisen, Freitext und Tag-Kontextmenü kommen in
+   Phase 3, das Konfigurieren später (siehe 3.8).
+4. Altes Dateiformat v1 wird nicht portiert.
+5. Palette: nur das Ziehen der Breite, ohne den Original-Knopf für die Beschriftungen und ohne Merken der Breite.
 
 ## Weitere Funktionen des Originals, keiner Phase zugeordnet
 
