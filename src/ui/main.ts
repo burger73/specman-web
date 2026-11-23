@@ -216,6 +216,7 @@ const textHost: TextInputHost & PaletteHost = {
   undo,
   redo,
   focus: (f) => restoreFocus(stage, f),
+  redraw: () => redraw(),
   structural(op) {
     const editor = doc?.editor;
     if (!editor) return;

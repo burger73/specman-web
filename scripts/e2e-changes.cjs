@@ -177,6 +177,42 @@ function check(name, ok, detail = '') {
   // wie im Original steht der Cursor danach vor dem Verweis (linkStilStart)
   check('Tippen danach landet vor dem Verweis, außerhalb', out.includes('markups=[(47,47,Changed,yellow)(48,48,ChangedSteplink,yellow)]'), out.split('\n').filter((l) => l.includes('refering')).join('\n'));
 
+  // ---- 2.6 Catch-Sequenzen ----
+  await open('breakcatch.nsd');
+  const sub0 = (n) => `[data-path="mainSequence/steps/0/subsequence/steps/${n}/content/areas/0"]`;
+  await page.click(sub0(0));
+  await page.click('.app-palette-btn[title="Catch-Block anlegen"]');
+  const items = await page.$$eval('.app-catch-item', (els) => els.map((e) => e.textContent));
+  check('Dialog bietet den unverknüpften Break-Schritt an', items.length === 1 && items[0] === '1.3 - Customer not found', JSON.stringify(items));
+  await page.click('.app-catch-item');
+  out = await save();
+  check('Catch-Sequenz angelegt', /catch\(1\.3, `<b>Customer not found<\/b>`[^\n]*\{\n\s*simple\(1\.3\.1, [0-9a-f]{8}, `Neuer Schritt 1`/.test(out));
+  const head = '[data-path="mainSequence/steps/0/subsequence/catchArea/catchSequences/0/heading/areas/0"]';
+  await page.click(head);
+  await page.click('button[title="Schritt löschen"]');
+  out = await save();
+  check('Löschen in der Catch-Überschrift entfernt die Sequenz', !out.includes('catch(1.3,'));
+  // Abgleich beim Verlassen
+  const brk = '[data-path="mainSequence/steps/2/subsequence/steps/2/content/areas/0"]';
+  await page.click(brk);
+  await k.press('End');
+  await k.type('!');
+  await page.click(sub0(0));
+  await page.waitForTimeout(100);
+  out = await save();
+  check('Break-Text wandert in die Catch-Überschrift', /catch\(3\.3, `<b>Customer not found!<\/b>`/.test(out), (out.match(/catch\(3\.3[^\n]*/) ?? [''])[0]);
+  await k.press('Control+z');
+  await page.waitForTimeout(50);
+  out = await save();
+  check('Undo nimmt Tippen und Abgleich zusammen zurück', out === fixture('breakcatch.nsd'));
+  // mit Verfolgung
+  await tool('toolbar.track.changes');
+  await page.click(sub0(0));
+  await page.click('.app-palette-btn[title="Catch-Block anlegen"]');
+  await page.click('.app-catch-item');
+  out = await save();
+  check('mit Verfolgung ist die Catch-Sequenz hinzugefügt', /catch\(1\.3, [^\n]*change=\(added, yellow\)/.test(out));
+
   check('keine Fehler im Browser', errors.length === 0, errors.join('\n'));
   await browser.close();
   process.exit(failures ? 1 : 0);

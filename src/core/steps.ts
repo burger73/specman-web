@@ -151,6 +151,13 @@ export function insertStep(d: Diagram, kind: NewStepKind, afterStepId: string | 
   });
 }
 
+/**
+ * SchrittSequenzView.allowsStepDeletion: Es muss ein Schritt übrig bleiben, der nicht als gelöscht markiert ist.
+ */
+export function allowsStepDeletion(seq: StepSequence): boolean {
+  return seq.steps.length - seq.steps.filter((s) => s.changeInfo?.changetype === 'Geloescht').length > 1;
+}
+
 /** Alle Schritt-IDs eines Schritts mit seinen Unterschritten */
 export function stepTreeIds(step: Step): string[] {
   const ids = [step.id];
@@ -169,7 +176,7 @@ export function stepTreeIds(step: Step): string[] {
 export function deleteStep(d: Diagram, stepId: string): Focus | undefined {
   const loc = locateStep(d, stepId);
   if (!loc) throw new EditException('Schritt nicht gefunden');
-  if (loc.seq.steps.length <= 1) throw new EditException('Der letzte Schritt kann nicht entfernt werden.');
+  if (!allowsStepDeletion(loc.seq)) throw new EditException('Der letzte Schritt kann nicht entfernt werden.');
   return restructure(d, () => {
     const removed = new Set(stepTreeIds(loc.step));
     loc.seq.steps.splice(loc.index, 1);
@@ -261,7 +268,7 @@ export function deleteOrMarkStep(d: Diagram, stepId: string, branch?: number): F
   }
   if (step.changeInfo?.changetype === 'Geloescht') return undefined;
   // isDeletionAllowed: auch das Markieren verlangt, dass der Schritt nicht der letzte seiner Sequenz ist
-  if (loc.seq.steps.length <= 1) throw new EditException('Der letzte Schritt kann nicht entfernt werden.');
+  if (!allowsStepDeletion(loc.seq)) throw new EditException('Der letzte Schritt kann nicht entfernt werden.');
   if (step.kind === 'case' && branch !== undefined) {
     const seq = branch === 0 ? step.defaultSequence : step.caseSequences[branch - 1];
     if (seq.changeInfo?.changetype === 'Hinzugefuegt') return restructure(d, () => dropCaseBranch(d, step, branch));

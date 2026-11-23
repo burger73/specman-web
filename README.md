@@ -1,7 +1,7 @@
 # Specman Web
 
 Portierung von [Specman](https://github.com/j-specman/specman) (Java/Swing-Editor für Use-Case-Abläufe als
-Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Änderungsverfolgung) abgeschlossen, siehe `PLAN-phase1.md`. Phase 2 (Änderungsverfolgung) läuft, siehe `PLAN-phase2.md`.
+Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Änderungsverfolgung) abgeschlossen, siehe `PLAN-phase1.md`. Phase 2 (Änderungsverfolgung, Catch-Sequenzen) umgesetzt, siehe `PLAN-phase2.md`.
 
 ## Befehle
 
@@ -18,7 +18,7 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Ä
   Reader (`ModelParser_V002`), Writer (`ModelSerializer_V002`), Change-Set-Farben, Edit-Kern mit Undo/Redo
   (`editor.ts`), Schrittnummern (`numbering.ts`) und -verweise (`steplinks.ts`), Pfade zu Areas (`paths.ts`),
   Operationen auf Areas (`areas.ts`) und Schritten (`steps.ts`), Übernehmen/Verwerfen/Zusammenführen/Review
-  (`tracking.ts`), Aufzeichnen beim Anlegen und Löschen (`recording.ts`). Die Text-Markups bearbeitet dabei `ui/texttrack.ts` über das DOM (Tests unter jsdom).
+  (`tracking.ts`), Aufzeichnen beim Anlegen und Löschen (`recording.ts`), Catch-Sequenzen (`catches.ts`). Die Text-Markups bearbeitet dabei `ui/texttrack.ts` über das DOM (Tests unter jsdom).
 - `src/ui` – Darstellung nach den Swing-Views, Markups, HTML-Bereinigung
 - `test/fixtures` – die V2-Beispieldateien aus dem Original-Repo
 
@@ -47,6 +47,8 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Ä
 - Die Textfassung fasst Leerraum-Folgen wie Swing zu einem Leerzeichen zusammen; das Markup des ersten Leerzeichens
   gilt. Ohne Verfolgung landet Getipptes neben Änderungs-Markups und Schrittverweisen außerhalb davon
   (standardStilSetzenWennNochNichtVorhanden).
+- Catch-Sequenzen: Der Abgleich von Break-Schritt und Catch-Überschrift beim Verlassen gehört zum Undo-Schritt des
+  Tippens davor. Co-Catches verschieben (auf/ab) und Catch-Blöcke per Drag & Drop anlegen fehlen noch.
 - Ob aufgezeichnet wird, steht im Diagramm (`changeModeEnabled`, `changeSetName`), die Operationen fragen es selbst ab.
 - Fehlermeldungen (z. B. „Der letzte Schritt kann nicht entfernt werden.“) erscheinen als Dialog, das Original
   gibt manche nur auf der Konsole aus (Sonst-Zweig, mindestens zwei Fälle).

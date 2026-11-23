@@ -9,6 +9,8 @@ import { currentFocus } from './focus.ts';
 import { readTextArea } from './textedit.ts';
 import { caretAtStart, cutParagraph, splitAtCaret } from './textsplit.ts';
 import { trackingSet } from '../core/recording.ts';
+import { catchHeadingOfPath, syncCatchHeading } from '../core/catches.ts';
+import { stepOfPath } from '../core/steps.ts';
 import { deleteTracked, insertText, markComposed, markNewLineBreak, markNewParagraph } from './textrecord.ts';
 
 export interface TextInputHost {
@@ -19,6 +21,8 @@ export interface TextInputHost {
   structural(op: (d: Diagram) => Focus | undefined): void;
   /** Fokus setzen ohne Änderung am Modell */
   focus(f: Focus): void;
+  /** neu zeichnen, Fokus bleibt (nach dem Abgleich von Break-Schritt und Catch-Überschrift) */
+  redraw?(): void;
 }
 
 export function installTextInput(stage: HTMLElement, host: TextInputHost): void {
@@ -125,8 +129,21 @@ export function installTextInput(stage: HTMLElement, host: TextInputHost): void 
     }
   });
 
-  // Area verlassen beendet den Undo-Schritt
-  stage.addEventListener('focusout', () => host.editor()?.endMerge());
+  // Area verlassen: Break-Schritt und Catch-Überschrift abgleichen (focusLost), dann endet der Undo-Schritt
+  stage.addEventListener('focusout', (e) => {
+    const editor = host.editor();
+    const el = (e.target as HTMLElement).closest?.<HTMLElement>('[data-path]');
+    if (editor && el) {
+      const path = el.dataset.path!;
+      const d = editor.diagram;
+      if ((stepOfPath(d, path)?.kind === 'break' || catchHeadingOfPath(d, path)) && syncCatchHeading(structuredClone(d), path)) {
+        // gehört zum Undo-Schritt des Tippens davor
+        editor.apply((dd) => void syncCatchHeading(dd, path), { mergeKey: path });
+        setTimeout(() => host.redraw?.());
+      }
+    }
+    editor?.endMerge();
+  });
 
   // Einfügen nur als reiner Text, Formatierungen aus anderen Programmen passen nicht ins Dateiformat
   stage.addEventListener('paste', (e) => {

@@ -82,3 +82,18 @@ Testmaterial dienen.
 2. Das Aufzeichnen im Text muss am Desktop sauber funktionieren. Tastaturen mit Komposition (Android) dürfen eingeschränkt sein.
 3. Catch-Sequenzen kommen am Ende (2.6), damit sie gleich mit Verfolgung entstehen.
 4. Löschen von geändertem Text eines fremden Change Sets entfernt ihn wie im Java-Code, statt ihn zu streichen.
+
+## Umgesetzt (23.11.2026)
+
+Commits 2.1–2.3, 2.4, 2.5 und 2.6 auf main. 123 Vitest-Tests (DOM-Teile unter jsdom), Browser-Prüfungen in
+`scripts/e2e-changes.cjs` (32 Checks) und `scripts/e2e-edit.cjs`.
+
+Nebenbei korrigiert:
+- Die Textfassung fasst Leerraum-Folgen wie Swing zusammen (Einrückungen aus der Datei landeten vorher im plainText).
+- Löschen prüft wie `allowsStepDeletion`, dass ein nicht als gelöscht markierter Schritt übrig bleibt.
+- Geteilte Listenpunkte übernehmen die Änderungsart.
+
+Offen bzw. bewusst nicht portiert:
+- Verschieben per Drag & Drop (Quell-/Zielschritt entstehen noch nicht), Co-Catches auf/ab
+- Zwischenablage für Schritte und Tabellen mit Änderungsmarkierungen (`InternalPasteChangemarksAdjuster`)
+- PlantUML bearbeiten (Backup beim Ändern), weil PlantUML erst in Phase 3 kommt

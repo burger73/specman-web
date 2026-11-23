@@ -4,8 +4,10 @@ import type { Focus } from '../core/editor.ts';
 import { EditException } from '../core/editor.ts';
 import type { Diagram } from '../core/model.ts';
 import { hasSteplinksTo, stepNumbersById } from '../core/steplinks.ts';
-import { addCaseBranch, caseBranchOfPath, deleteOrMarkStep, insertStep, locateStep, stepOfPath, stepTreeIds, toggleBorder, toggleShade, type NewStepKind } from '../core/steps.ts';
+import { addCaseBranch, allowsStepDeletion, caseBranchOfPath, deleteOrMarkStep, insertStep, locateStep, stepOfPath, stepTreeIds, toggleBorder, toggleShade, type NewStepKind } from '../core/steps.ts';
 import { trackingSet } from '../core/recording.ts';
+import { catchHeadingOfPath, removeOrMarkCatchHeading } from '../core/catches.ts';
+import { openCatchDialog } from './catchdialog.ts';
 import { currentFocus } from './focus.ts';
 
 export interface PaletteHost {
@@ -32,6 +34,7 @@ export function createPalette(host: PaletteHost): HTMLElement {
   for (const [kind, icon, label, title] of STEPS) {
     bar.append(paletteButton(icon, label, title, () => host.structural((d) => insertStep(d, kind, focusedStepId(d)))));
   }
+  bar.append(paletteButton('step-catch', 'Catch-Block', 'Catch-Block anlegen', () => openCatchDialog(host)));
   bar.append(paletteButton('step-case-branch', 'Case-Zweig', 'Case-Zweig anlegen', () => addBranch(host)));
   return bar;
 }
@@ -72,6 +75,11 @@ export function deleteFocusedStep(host: PaletteHost): void {
   const d = host.diagram();
   const f = currentFocus();
   if (!d || !f) return;
+  // Catch-Überschrift: die Catch-Sequenz bzw. den Co-Catch entfernen oder markieren
+  if (catchHeadingOfPath(d, f.path)) {
+    host.structural((dd) => removeOrMarkCatchHeading(dd, f.path));
+    return;
+  }
   const step = stepOfPath(d, f.path);
   if (!step) return;
   const b = caseBranchOfPath(d, f.path);
@@ -84,7 +92,7 @@ export function deleteFocusedStep(host: PaletteHost): void {
   }
   // isDeletionAllowed (beim Markieren auch für einen Zweig, wie im Original)
   const loc = locateStep(d, step.id);
-  if (loc && loc.seq.steps.length <= 1) return alert(new EditException('Der letzte Schritt kann nicht entfernt werden.').message);
+  if (loc && !allowsStepDeletion(loc.seq)) return alert(new EditException('Der letzte Schritt kann nicht entfernt werden.').message);
   const numbers = stepNumbersById(d);
   const removed = new Set(stepTreeIds(step).map((id) => numbers.get(id)!));
   if (
