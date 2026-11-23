@@ -187,3 +187,9 @@ body.app-drop .app-stage { outline: 3px dashed #3d5aa8; outline-offset: -8px; }
 .app-dialog label { display: flex; justify-content: space-between; gap: 12px; margin: 6px 0; }
 .app-dialog input { width: 70px; }
 .app-dialog-buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+
+/* ---- Bilder bearbeiten ---- */
+.sm-image[data-image-path] { position: relative; width: fit-content; max-width: 100%; outline: none; }
+.sm-image[data-image-path]:focus > img { outline: 2px solid #3d5aa8; outline-offset: 1px; }
+.sm-image-resizer { position: absolute; top: 0; right: -4px; width: 8px; height: 100%; cursor: ew-resize; }
+.sm-image-resizer:hover { background: rgba(61, 90, 168, 0.25); }

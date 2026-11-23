@@ -454,6 +454,16 @@ function renderImage(img: ImageArea): HTMLElement {
     wrap.append(details);
     return wrap;
   }
+  if (options.editable) {
+    // auswählbar (Entf, Enter) und am rechten Rand in der Größe änderbar, siehe imageedit.ts
+    const path = paths.get(img);
+    if (path !== undefined) wrap.dataset.imagePath = path;
+    wrap.dataset.scale = String(img.individualScalePercent);
+    wrap.tabIndex = 0;
+    const resizer = div('sm-image-resizer');
+    resizer.title = 'Größe ändern';
+    wrap.append(resizer);
+  }
   const el = document.createElement('img');
   el.src =
     img.kind === 'svg' ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(img.source) : `data:image/${img.imageType};base64,${img.imageData}`;
@@ -461,7 +471,7 @@ function renderImage(img: ImageArea): HTMLElement {
   el.addEventListener('load', () => {
     el.style.width = `${el.naturalWidth * img.individualScalePercent}px`;
   });
-  wrap.append(el);
+  wrap.prepend(el);
   return wrap;
 }
 

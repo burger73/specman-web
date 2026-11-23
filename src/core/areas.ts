@@ -3,7 +3,7 @@
 // schon als fertige Text-Areas (HTML zerlegen kann nur das DOM), hier wird nur das Modell umgebaut.
 import type { Focus } from './editor.ts';
 import { EditException } from './editor.ts';
-import type { Diagram, EditArea, EditorContent, ListItemEditArea, TableEditArea, TextEditArea } from './model.ts';
+import type { Diagram, EditArea, EditorContent, ImageArea, ListItemEditArea, TableEditArea, TextEditArea } from './model.ts';
 import { resolvePath } from './paths.ts';
 
 /** Lage einer Area: Inhalt, in dem sie steht, ihr Index und der Pfad des Inhalts */
@@ -195,14 +195,40 @@ export function tableCellOfPath(path: string): { tablePath: string; row: number;
  */
 export function insertTable(d: Diagram, path: string, before: TextEditArea, after: TextEditArea | undefined, columns: number, rows: number): Focus {
   if (columns < 1 || rows < 1) throw new EditException('Eine Tabelle braucht mindestens eine Zeile und eine Spalte.');
-  const { container, containerPath, index } = locateText(d, path);
   const table: TableEditArea = {
     kind: 'table',
     cells: Array.from({ length: rows }, () => Array.from({ length: columns }, emptyCell)),
     tableWidthPercent: 100,
   };
-  container.areas.splice(index, 1, before, table, ...(after ? [after] : []));
-  return { path: cellPath(areaPath(containerPath, index + 1), 0, 0), offset: 0 };
+  const tablePath = insertAtCaret(d, path, before, after, table);
+  return { path: cellPath(tablePath, 0, 0), offset: 0 };
+}
+
+/** Area hinter dem Text vor dem Cursor einfügen, der Text hinter dem Cursor folgt ihr. @returns Pfad der neuen Area */
+function insertAtCaret(d: Diagram, path: string, before: TextEditArea, after: TextEditArea | undefined, area: EditArea): string {
+  const { container, containerPath, index } = locateText(d, path);
+  container.areas.splice(index, 1, before, area, ...(after ? [after] : []));
+  return areaPath(containerPath, index + 1);
+}
+
+/** EditContainer.addImageAreaUDBL: Bild am Cursor einfügen, der Fokus bleibt im Text davor (an dessen Ende) */
+export function insertImage(d: Diagram, path: string, before: TextEditArea, after: TextEditArea | undefined, image: ImageArea): Focus {
+  insertAtCaret(d, path, before, after, image);
+  return { path };
+}
+
+/** Größe eines Bilds ändern (AbstractImageEditArea.spaltenbreitenAnpassenNachMausDragging) */
+export function setImageScale(d: Diagram, path: string, scale: number): void {
+  const { area } = locateArea(d, path);
+  if (area.kind !== 'image' && area.kind !== 'svg' && area.kind !== 'plantuml') throw new EditException(`${path} ist kein Bild`);
+  area.individualScalePercent = scale;
+}
+
+/** AbstractImageEditArea.appendTextEditAreaByKeypressUDBL / EditContainer.addTextEditAreaUDBL: leerer Text dahinter */
+export function addTextAfter(d: Diagram, path: string): Focus {
+  const { container, containerPath, index } = locateArea(d, path);
+  container.areas.splice(index + 1, 0, { kind: 'text', text: '', plainText: '', markups: [] });
+  return { path: areaPath(containerPath, index + 1), offset: 0 };
 }
 
 /** TableEditArea.addRowUDBL: leere Zeile an rowIndex */

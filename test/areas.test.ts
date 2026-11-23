@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addListItem, addTableColumn, addTableRow, appendText, backspaceAtStart, dissolveListItem, insertTable, nextCell, paragraphBelow, removeTableColumn, removeTableRow, splitListItem, tableCellOfPath } from '../src/core/areas.ts';
+import { addListItem, addTextAfter, insertImage, setImageScale, addTableColumn, addTableRow, appendText, backspaceAtStart, dissolveListItem, insertTable, nextCell, paragraphBelow, removeTableColumn, removeTableRow, splitListItem, tableCellOfPath } from '../src/core/areas.ts';
 import { newDiagram, textArea } from '../src/core/factory.ts';
 import type { Diagram, EditArea, ListItemEditArea, TableEditArea, TextEditArea } from '../src/core/model.ts';
 import { renumber } from '../src/core/numbering.ts';
@@ -150,5 +150,18 @@ describe('Tabellen', () => {
     expect(nextCell(d, T, 0, 1).path).toBe(`${T}/cells/1/0/areas/0`);
     expect(table(d).cells).toHaveLength(2);
     expect(tableCellOfPath(`${T}/cells/1/0/areas/0`)).toEqual({ tablePath: T, row: 1, column: 0 });
+  });
+});
+
+describe('Bilder', () => {
+  it('am Cursor einfügen, skalieren, Absatz dahinter', () => {
+    const d = diagram(textArea('vor nach'));
+    const focus = insertImage(d, `${P}/areas/0`, textArea('vor'), textArea('nach'), { kind: 'svg', source: '<svg xmlns="http://www.w3.org/2000/svg"/>', individualScalePercent: 1 });
+    expect(texts(areas(d))).toEqual(['vor', 'svg', 'nach']);
+    expect(focus).toEqual({ path: `${P}/areas/0` });
+    setImageScale(d, `${P}/areas/1`, 1.5);
+    expect(roundtrip(d)).toContain('scale=150%');
+    expect(addTextAfter(d, `${P}/areas/1`)).toEqual({ path: `${P}/areas/2`, offset: 0 });
+    expect(texts(areas(d))).toEqual(['vor', 'svg', '', 'nach']);
   });
 });

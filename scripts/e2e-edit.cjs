@@ -139,6 +139,23 @@ function check(name, ok, detail = '') {
   out = await save();
   check('Spalte über die Lücke einfügen, Zeile im linken Rand entfernen', out.includes('row { cell(`A2`, plain=`A2`) | cell(``) | cell(`B2`, plain=`B2`) }'), out.slice(out.indexOf('mainSequence')));
 
+  // ---- Bilder ----
+  await page.goto(`${BASE}?new`);
+  await page.waitForSelector('.sm-welcome');
+  await page.click('button[title="Einfachen Schritt anlegen"]');
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('button[title="Bild einfügen"]')]);
+  await chooser.setFiles(path.join(__dirname, '..', 'public', 'cursors', 'add-row-cursor.png'));
+  await page.waitForSelector('.sm-image img');
+  out = await save();
+  check('Bild per Datei einfügen (als PNG)', /image\(scale=100%, type=png\) \{ \[base64:iVBOR/.test(out));
+  await page.click('.sm-image img');
+  await k.press('Enter');
+  await k.type('Unter dem Bild');
+  await page.click('.sm-image img');
+  await k.press('Delete');
+  out = await save();
+  check('Enter am Bild legt Absatz an, Entf entfernt es, Texte verschmelzen', out.includes('`Neuer Schritt 1<div>Unter dem Bild</div>`'), out.slice(out.indexOf('mainSequence')));
+
   check('keine Fehler im Browser', errors.length === 0, errors.join('\n'));
   await browser.close();
   fs.rmSync(tmp, { recursive: true });

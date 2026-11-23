@@ -34,6 +34,8 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten) in Arb
 - Beim Löschen eines Break-Schritts verschwinden die Catch-Sequenzen und Co-Catches mit, die ihn fangen.
 - Fehlermeldungen (z. B. „Der letzte Schritt kann nicht entfernt werden.“) erscheinen als Dialog, das Original
   gibt manche nur auf der Konsole aus (Sonst-Zweig, mindestens zwei Fälle).
+- Bilder: Rastergrafiken werden wie im Original als PNG gespeichert (Umwandlung über ein Canvas), SVG-Dateien als
+  Vektorgrafik. Kopieren und Ausschneiden von Bildern fehlt noch (Zwischenablage kommt später).
 - Reader: Die Zusatz-Areas eines Listenpunkts behalten ihre Reihenfolge (Java sortiert nach Text/Tabelle/Bild).
 - Writer: schreibt standardmäßig Version 1.4.0 ins Envelope, beim Roundtrip die Version der gelesenen Datei.
 - Nicht in Phase 0: Bearbeiten, PDF-Export, PlantUML-Rendering (Platzhalter mit Quelltext), JSON-Format v1.
