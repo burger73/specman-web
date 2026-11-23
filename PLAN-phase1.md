@@ -60,13 +60,13 @@ Vorschlag für die Reihenfolge:
 
 - Tabellen und Bilder gehören zu Phase 1 (Markus, 23.11.2026).
 
-## Stand (23.11.2026)
+## Abgeschlossen (23.11.2026)
 
-Erledigt: 1.1 bis 1.7 (Commits auf main). 85 Vitest-Tests, dazu Browser-Prüfungen in `scripts/e2e-edit.cjs`
+Phase 1 ist mit 1.7 abgeschlossen (Markus, 23.11.2026), Git-Tag `phase-1`. Erledigt sind 1.1 bis 1.7 (Commits auf main). 85 Vitest-Tests, dazu Browser-Prüfungen in `scripts/e2e-edit.cjs`
 (laufen gegen den Dev-Server).
 
 Offen bzw. bewusst verschoben:
-- 1.8 Catch-Sequenzen (Break ↔ Catch, braucht den CatchLinkDialog)
+- 1.8 Catch-Sequenzen (Break ↔ Catch, braucht den CatchLinkDialog) → wandert nach Phase 2, Design vorher besprechen
 - Speichern zurück in dieselbe Datei geht nur im sicheren Kontext (https oder localhost). Über die
   Tailscale-IP per http wird heruntergeladen.
 - Nicht portiert: Spaltenbreiten ziehen (If-Else, Case, Tabellen), Pfeiltasten-Navigation zwischen Areas, Kopieren

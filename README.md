@@ -1,7 +1,7 @@
 # Specman Web
 
 Portierung von [Specman](https://github.com/j-specman/specman) (Java/Swing-Editor für Use-Case-Abläufe als
-Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten) in Arbeit, siehe `PLAN-phase1.md`.
+Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Änderungsverfolgung) abgeschlossen, siehe `PLAN-phase1.md`.
 
 ## Befehle
 
