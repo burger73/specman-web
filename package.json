@@ -9,13 +9,18 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "gen:parser": "antlr-ng -Dlanguage=TypeScript -l false -v true -o src/core/parser grammar/SpecmanModel_V002.g4 && sed -i '1i // @ts-nocheck – generiert von antlr-ng (npm run gen:parser), nicht von Hand ändern' src/core/parser/*.ts"
   },
   "license": "BSD-3-Clause",
   "devDependencies": {
     "@types/node": "^26.6.6",
+    "antlr-ng": "^1.0.10",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vitest": "^5.1.1"
+  },
+  "dependencies": {
+    "antlr4ng": "^3.0.16"
   }
 }
