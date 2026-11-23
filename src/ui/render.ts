@@ -45,6 +45,8 @@ let paths = new Map<object, string>();
 export interface RenderOptions {
   /** Klapp-Knopf eines strukturierten Schritts; ohne Handler klappt nur die Darstellung */
   onToggle?: (stepId: string) => void;
+  /** Text-Areas bearbeitbar machen (contenteditable) */
+  editable?: boolean;
 }
 let options: RenderOptions = {};
 
@@ -56,14 +58,27 @@ export function renderDiagram(d: Diagram, opts: RenderOptions = {}): HTMLElement
   const sheet = div('sm-sheet');
   // width gilt im Original beim gespeicherten Zoom (Bildschirmpixel), umgerechnet auf 100 %
   sheet.style.width = `${(d.width * 100) / (d.zoomFactor || 100)}px`;
-  if (d.intro) sheet.append(renderContent(d.intro, { cls: 'sm-intro' }));
+  const intro = introOutro(d, 'intro');
+  if (intro) sheet.append(intro);
   if (d.mainSequence.steps.length > 0) {
     const frame = div('sm-frame');
     frame.append(renderSequence(d.mainSequence));
     sheet.append(frame);
   } else sheet.append(welcome());
-  if (d.outro) sheet.append(renderContent(d.outro, { cls: 'sm-outro' }));
+  const outro = introOutro(d, 'outro');
+  if (outro) sheet.append(outro);
   return sheet;
+}
+
+/** Intro bzw. Outro; beim Bearbeiten auch ohne Inhalt als leere Area zum Hineinschreiben (wie im Original) */
+function introOutro(d: Diagram, which: 'intro' | 'outro'): HTMLElement | undefined {
+  const ec = d[which];
+  if (ec) return renderContent(ec, { cls: `sm-${which}` });
+  if (!options.editable) return undefined;
+  const el = renderContent({ areas: [{ kind: 'text', text: '', plainText: '', markups: [] }] }, { cls: `sm-${which}` });
+  // textinput.ts legt Intro/Outro beim ersten Tippen im Modell an
+  el.querySelector<HTMLElement>('.sm-text')!.dataset.path = `${which}/areas/0`;
+  return el;
 }
 
 /** WelcomeMessagePanel (welcome.message): Hinweis im leeren Diagramm, bis der erste Schritt angelegt ist */
@@ -376,6 +391,7 @@ function renderText(area: TextEditArea): HTMLElement {
   const el = div('sm-text');
   const path = paths.get(area);
   if (path !== undefined) el.dataset.path = path;
+  if (options.editable) el.contentEditable = 'true';
   el.append(sanitizeHtml(area.text));
   if (area.markups.length > 0) applyMarkups(el, area.plainText, area.markups, markupBackground);
   return el;
@@ -465,7 +481,10 @@ export function markWholeChange(el: HTMLElement, changetype: string, changeset: 
 
 /** Styles.ganzerSchrittGeloeschtStil: Textstücke einzeln umhüllen, damit Schwarz nur hinter dem Text liegt */
 function markDeletedText(root: HTMLElement): void {
-  for (const text of Array.from(root.querySelectorAll<HTMLElement>('.sm-text'))) {
+  const texts = root.matches('.sm-text') ? [root] : Array.from(root.querySelectorAll<HTMLElement>('.sm-text'));
+  for (const text of texts) {
+    // Gelöschtes bleibt bis zum Übernehmen/Verwerfen der Änderung (Phase 2) unbearbeitbar
+    text.contentEditable = 'false';
     const walker = document.createTreeWalker(text, NodeFilter.SHOW_TEXT);
     const nodes: Text[] = [];
     for (let n = walker.nextNode(); n; n = walker.nextNode()) if ((n as Text).data.trim()) nodes.push(n as Text);

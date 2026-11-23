@@ -5,7 +5,7 @@ import { generateId } from './model.ts';
 /** WorkingAreaPanel.INITIAL_DIAGRAMM_WIDTH */
 export const INITIAL_DIAGRAM_WIDTH = 700;
 
-/** Specman.initEmptyDiagram: keine Schritte, Breite 700, Zoom 100. Der Name ist der alte Swing-Komponentenname. */
+/** Specman.initEmptyDiagram: keine Schritte, leeres Intro und Outro, Breite 700, Zoom 100. Der Name ist der alte Swing-Komponentenname. */
 export function newDiagram(): Diagram {
   return {
     name: 'frame0',
@@ -14,6 +14,9 @@ export function newDiagram(): Diagram {
     changeModeEnabled: false,
     changeSetName: 'yellow',
     mainSequence: { id: generateId(), steps: [] },
+    // Java legt immer Intro und Outro an und schreibt sie auch leer (intro(``) {})
+    intro: content(),
+    outro: content(),
     metaTagConfigs: [],
   };
 }
@@ -38,3 +41,4 @@ export function htmlToPlain(html: string): string {
       e[0] === '#' ? String.fromCodePoint(e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : Number(e.slice(1))) : (ENTITIES[e] ?? m),
     );
 }
+

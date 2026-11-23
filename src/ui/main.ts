@@ -5,6 +5,7 @@ import { writeDiagram } from '../core/writer.ts';
 import { droppedFile, pickFile, saveFile, type OpenedFile } from './files.ts';
 import { currentFocus, restoreFocus } from './focus.ts';
 import { renderDiagram } from './render.ts';
+import { format, installTextInput } from './textinput.ts';
 import './style.css';
 
 // Beispiele: die Testdateien aus dem Original-Repo
@@ -40,6 +41,9 @@ const saveBtn = button('material/save', 'Speichern (Strg+S)', () => void save(fa
 const saveAsBtn = button('material/save_as', 'Speichern unter … (Strg+Umschalt+S)', () => void save(true));
 const undoBtn = button('material/undo', 'Rückgängig (Strg+Z)', () => undo());
 const redoBtn = button('material/redo', 'Wiederholen (Strg+Y)', () => redo());
+const boldBtn = button('material/format_bold', 'Fett (Strg+B)', () => format(doc?.editor, 'bold'));
+const italicBtn = button('material/format_italic', 'Kursiv (Strg+I)', () => format(doc?.editor, 'italic'));
+const underlineBtn = button('material/format_underlined', 'Unterstrichen (Strg+U)', () => format(doc?.editor, 'underline'));
 
 const select = document.createElement('select');
 select.title = 'Beispiele aus dem Original-Repo';
@@ -63,7 +67,7 @@ for (const z of ['Datei', '80', '100', '120', '150']) {
 }
 const status = document.createElement('span');
 status.className = 'app-status';
-bar.append(group(newBtn, openBtn, saveBtn, saveAsBtn), group(undoBtn, redoBtn), select, zoom, status);
+bar.append(group(newBtn, openBtn, saveBtn, saveAsBtn), group(undoBtn, redoBtn), group(boldBtn, italicBtn, underlineBtn), select, zoom, status);
 const stage = document.createElement('main');
 stage.className = 'app-stage';
 app.append(bar, stage);
@@ -141,6 +145,7 @@ function redraw(focus: Focus | undefined = currentFocus()): void {
   const editor = doc.editor;
   const d = editor.diagram;
   const sheet = renderDiagram(d, {
+    editable: true,
     onToggle: (id) => {
       editor.mutateSilently((dd) =>
         forEachStep(dd.mainSequence, (s) => {
@@ -175,6 +180,7 @@ function afterUndoRedo(focus: Focus | undefined | null): void {
 
 const undo = () => doc && afterUndoRedo(doc.editor.undo(currentFocus()));
 const redo = () => doc && afterUndoRedo(doc.editor.redo(currentFocus()));
+installTextInput(stage, { editor: () => doc?.editor, undo, redo });
 
 document.addEventListener('keydown', (e) => {
   if (!(e.ctrlKey || e.metaKey) || e.altKey) return;

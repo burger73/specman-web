@@ -14,8 +14,8 @@ const isSpace = (c: string) => /\s/.test(c);
 export function applyMarkups(root: HTMLElement, plain: string, markups: Markup[], background: (m: Markup) => string): void {
   const positions = mapPlainToDom(root, plain);
   // von hinten nach vorn, damit das Aufteilen der Textknoten frühere Positionen nicht verschiebt
-  const sorted = [...markups].sort((a, b) => b.from - a.from);
-  for (const m of sorted) {
+  const sorted = markups.map((m, index) => ({ m, index })).sort((a, b) => b.m.from - a.m.from);
+  for (const { m, index } of sorted) {
     let start: Pos | undefined;
     let end: Pos | undefined;
     for (let i = m.from; i <= m.to && i < positions.length; i++) {
@@ -25,7 +25,7 @@ export function applyMarkups(root: HTMLElement, plain: string, markups: Markup[]
       end = p;
     }
     if (!start || !end) continue;
-    wrap(start, { node: end.node, offset: end.offset + 1 }, background(m), m);
+    wrap(start, { node: end.node, offset: end.offset + 1 }, background(m), m, index);
   }
 }
 
@@ -60,8 +60,8 @@ export function mapPlainToDom(root: Node, plain: string): (Pos | undefined)[] {
   return result;
 }
 
-/** Alle Textstücke zwischen start und end in Spans mit Hintergrundfarbe einpacken */
-function wrap(start: Pos, end: Pos, color: string, m: Markup): void {
+/** Alle Textstücke zwischen start und end in Spans mit Hintergrundfarbe einpacken; index = Nummer des Markups in der Area */
+function wrap(start: Pos, end: Pos, color: string, m: Markup, index: number): void {
   const range = document.createRange();
   range.setStart(start.node, start.offset);
   range.setEnd(end.node, end.offset);
@@ -76,6 +76,10 @@ function wrap(start: Pos, end: Pos, color: string, m: Markup): void {
     const target = from > 0 ? node.splitText(from) : node; // target enthält [from, to)
     const s = document.createElement('span');
     s.className = `sm-markup sm-markup-${m.type}`;
+    // beim Bearbeiten werden die Markups aus diesen Spans zurückgewonnen (textedit.ts)
+    s.dataset.markup = String(index);
+    s.dataset.type = m.type;
+    if (m.changeset !== undefined) s.dataset.changeset = m.changeset;
     s.style.backgroundColor = color;
     target.replaceWith(s);
     s.append(target);

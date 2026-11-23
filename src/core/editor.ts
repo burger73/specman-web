@@ -67,16 +67,17 @@ export class DiagramEditor {
    */
   apply<T>(op: (d: Diagram) => T, opts: ApplyOptions = {}): T {
     const merge = opts.mergeKey !== undefined && opts.mergeKey === this.mergeKey;
-    const before = structuredClone(this.diagram);
+    // beim Zusammenfassen (Tippen) gibt es keinen neuen Schnappschuss; solche Operationen dürfen nicht werfen
+    const before = merge ? undefined : structuredClone(this.diagram);
     let result: T;
     try {
       result = op(this.diagram);
     } catch (e) {
-      this.diagram = before;
+      if (before) this.diagram = before;
       throw e;
     }
     if (!merge) {
-      this.undoStack.push({ diagram: before, state: this.state, focus: opts.focus });
+      this.undoStack.push({ diagram: before!, state: this.state, focus: opts.focus });
       if (this.undoStack.length > MAX_UNDO) this.undoStack.shift();
     }
     this.redoStack = [];

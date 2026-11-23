@@ -158,3 +158,7 @@ body.app-drop .app-stage { outline: 3px dashed #3d5aa8; outline-offset: -8px; }
 /* Willkommenstext im leeren Diagramm */
 .sm-welcome { font-style: italic; color: #333; }
 .sm-welcome h2 { font-size: 20px; margin: 6px 0; }
+
+/* ---- Bearbeiten (Phase 1) ---- */
+.sm-text[contenteditable='true'] { outline: none; min-height: 1lh; cursor: text; }
+.sm-intro:has(> .sm-text:only-child:empty):hover, .sm-outro:has(> .sm-text:only-child:empty):hover { outline: 1px dashed #bbb; }
