@@ -4,7 +4,8 @@
 // Das HTML bleibt bei dem, was Swing schreibt (geprüft mit den SHEF-Aktionen auf einem JEditorPane):
 // - Absatzformat (HTMLBlockAction.changeBlockType): jeder berührte Absatz bekommt das neue Tag, seine Attribute
 //   bleiben. Text ohne Block (Swings p-implied) wird eingepackt. Vorformatiert fasst den Leerraum zusammen.
-// - Ausrichtung (HTMLAlignAction.alignElement): align-Attribut am Absatz. Text direkt im Body bleibt, wie er ist.
+// - Ausrichtung (HTMLAlignAction.alignElement): align-Attribut am Absatz. Text direkt im Body lässt das Original, wie
+//   er ist; hier wird er in <div align> gepackt (Abweichung, siehe README).
 // - Schriftgröße (HTMLFontSizeAction): Eintrag i ergibt <font size="i+1">, Schriftfarbe <font color>, Schriftart
 //   <font face>; Sitka (der erste Eintrag) entfernt face (FontChangeHandler, HTMLUtils.setFontFamily(null)).
 // - Styles löschen (ClearStylesAction): alle Zeichenformate der Auswahl fallen weg, auch Links.
@@ -149,12 +150,22 @@ export function changeBlockType(root: HTMLElement, range: Range, tag: string): v
   restoreSelection(root, saved);
 }
 
-/** HTMLAlignAction.alignElement: align am Absatz; Text direkt im Body (p-implied unter body) bleibt unverändert */
+/**
+ * HTMLAlignAction.alignElement: align am Absatz. Text direkt im Body (Swings p-implied unter body) lässt das Original
+ * unverändert; hier wird er wie die Zweigköpfe (HTMLEditorPane.formatInitialText) in <div align> gepackt (Markus).
+ */
 export function alignParagraphs(root: HTMLElement, range: Range, align: string): void {
+  const saved = saveSelection(root, range);
   for (const p of paragraphsIn(root, range)) {
     if ('el' in p) p.el.setAttribute('align', align);
-    else if (p.parent !== root && !['PRE', 'DD'].includes(p.parent.tagName)) p.parent.setAttribute('align', align);
+    else if (p.parent === root) {
+      const div = document.createElement('div');
+      div.setAttribute('align', align);
+      p.nodes[0].parentNode!.insertBefore(div, p.nodes[0]);
+      div.append(...p.nodes);
+    } else if (!['PRE', 'DD'].includes(p.parent.tagName)) p.parent.setAttribute('align', align);
   }
+  restoreSelection(root, saved);
 }
 
 /** Inline-Vorfahren an der Position teilen, bis die Grenze direkt in einem Block oder der Area liegt */

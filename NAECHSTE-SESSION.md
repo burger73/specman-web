@@ -10,9 +10,9 @@ Schritt fortschreiben oder löschen.
 - Erledigt und gepusht: 3.1 Palette ziehbar, 3.2 Spaltenbreiten, 3.3 Pfeiltasten, 3.4 Schrittverweise, 3.5
   Text-Werkzeuge. 3.1–3.4 hat Markus abgenommen (3.4 nach dem Fix „Sprungziel nicht unter der Leiste“), **3.5 noch
   nicht**: zu Beginn nachfragen.
-- Offene Frage an Markus aus 3.5: Ausrichten von Text ohne Absatz-Element (Text direkt im Body, z. B. ein frisch
-  getippter Schritt) tut im Original nichts, weil `HTMLAlignAction` Swings `p-implied` unter `body` auslässt. So ist es
-  portiert. Falls Markus das stört: Abweichung, dann wie die Zweigköpfe mit `<div align>` einpacken.
+- Aus Markus' Test von 3.5 (23.11.): Listeneintrag mit Auswahl und Anzeige in der Combo behoben, Toolbar-Gruppen
+  zweizeilig wie im Original, Ausrichten von Text ohne Absatz packt ihn in `<div align>` (Abweichung, im Original
+  wirkungslos). Seinen restlichen Test (Punkte 3–7 der Testliste) hat er noch nicht zurückgemeldet.
 - Umschalt+Links/Rechts neben einem Schrittverweis hebt die Auswahl auf: bleibt wie im Original (Markus).
 - Strg+Alt+Links/Rechts (Bearbeitungsverlauf) bleibt weg (Markus).
 
@@ -41,7 +41,7 @@ Schritt fortschreiben oder löschen.
 
 - `npm test` (Vitest, 159 Tests), `npx tsc --noEmit -p .`
 - gegen den Dev-Server (systemd-User-Service `specman-web-dev`, nur auf `http://100.101.105.4:5180/`):
-  `node scripts/e2e-edit.cjs` (17), `node scripts/e2e-changes.cjs` (32), `node scripts/e2e-phase3.cjs` (93)
+  `node scripts/e2e-edit.cjs` (17), `node scripts/e2e-changes.cjs` (32), `node scripts/e2e-phase3.cjs` (95)
 - `scripts/probe-areas.cjs [datei.nsd]` listet die Bereiche mit Lage, `scripts/shot*.cjs` machen Screenshots
   (`shot-textformat.cjs` zeigt die Toolbar mit offenem Menü).
 - Testdatei mit allen Elementen: `test/fixtures/specman-reference-v1.4-model-v2.nsd` (Vorschau:

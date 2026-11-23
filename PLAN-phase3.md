@@ -112,6 +112,8 @@ Nach Markus' Test: „Listeneintrag“ aus der Absatz-Combo wirkt jetzt auch mit
 die Schreibmarke nimmt, also das Ende der Auswahl; galt auch für die Listenknöpfe), und die Combo zeigt im Listenpunkt
 den Listeneintrag. Die Toolbar-Gruppen sind jetzt wie im Original zweizeilig (`ToolbarGroup.nextRow`,
 `addControlsInTwoRows`), auf schmalen Fenstern brechen ganze Gruppen um.
+Ausrichten von Text ohne Absatz-Element packt ihn jetzt in `<div align>` (Original: keine Wirkung; Markus fand die
+Knöpfe so wirkungslos, siehe README).
 
 ### 3.6 Einfüge-Werkzeuge (SHEF Insert-Gruppe)
 

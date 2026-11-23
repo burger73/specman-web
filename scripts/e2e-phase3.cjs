@@ -433,7 +433,11 @@ function check(name, ok, detail = '') {
 
   await caret(S1, 'end');
   await page.click('button[title="Zentriert"]');
-  check('Ausrichten von Text ohne Absatz-Element ändert nichts (wie Swing)', (await save()) === fixture(REF));
+  out = await save();
+  check('Text ohne Absatz-Element wird zum <div align> (Abweichung)', /^<div align="center">\s*Simple step\.[\s\S]*before\.\s*<\/div>$/.test(step1Html(out)), step1Html(out).slice(0, 60));
+  check('der Text ist zentriert', (await page.$eval(`[data-path="${S1}"] > div`, (d) => getComputedStyle(d).textAlign)).includes('center'));
+  await k.press('Control+z');
+  check('Undo nimmt das Ausrichten zurück', (await save()) === fixture(REF));
   check('Absatzformat zeigt Body Text', (await comboText('paragraph')) === 'Body Text');
   await paraMenu('Überschrift 1');
   out = await save();

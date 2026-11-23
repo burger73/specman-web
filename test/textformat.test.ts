@@ -81,10 +81,11 @@ describe('Absatzformat (HTMLBlockAction)', () => {
 });
 
 describe('Ausrichtung (HTMLAlignAction)', () => {
-  it('Text ohne Absatz-Element bleibt unverändert', () => {
-    const { el, range } = area('Hallo Welt', 'Welt', 'Welt', true);
+  it('Text ohne Absatz-Element kommt in ein <div align> (Abweichung: Swing lässt ihn unverändert)', () => {
+    const { el, range } = area('Hallo <b>Welt</b><div>B2</div>', 'Welt', 'Welt', true);
     alignParagraphs(el, range, 'center');
-    expect(html(el)).toBe('Hallo Welt');
+    expect(html(el)).toBe('<div align="center">Hallo <b>Welt</b></div><div>B2</div>');
+    expect(getSelection()!.anchorNode!.textContent).toBe('Welt');
   });
 
   it('setzt align an den Absätzen der Auswahl', () => {
