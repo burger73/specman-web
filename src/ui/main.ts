@@ -22,21 +22,33 @@ for (const z of ['Datei', '80', '100', '120', '150']) {
   o.textContent = z === 'Datei' ? 'Zoom wie Datei' : `${z} %`;
   zoom.append(o);
 }
+const open = document.createElement('label');
+open.className = 'app-open';
+open.textContent = 'Datei öffnen …';
+const fileInput = document.createElement('input');
+fileInput.type = 'file';
+fileInput.accept = '.nsd';
+fileInput.hidden = true;
+open.append(fileInput);
 const status = document.createElement('span');
 status.className = 'app-status';
-bar.append(select, zoom, status);
+bar.append(open, select, zoom, status);
 const stage = document.createElement('main');
 stage.className = 'app-stage';
 app.append(bar, stage);
 
+/** zuletzt angezeigte Datei, damit ein Zoomwechsel sie neu darstellt */
+let current = { name: '', text: '' };
+
 function show(name: string, text: string): void {
+  current = { name, text };
   stage.replaceChildren();
   try {
     const { diagram, envelope } = readDiagram(text);
     const sheet = renderDiagram(diagram);
     sheet.style.zoom = String((zoom.value === 'Datei' ? diagram.zoomFactor : Number(zoom.value)) / 100);
     stage.append(sheet);
-    status.textContent = `${name} – Specman ${envelope.specmanVersion}, Zoom ${diagram.zoomFactor} %`;
+    status.textContent = `${name} – Specman ${envelope.specmanVersion}, gespeicherter Zoom ${diagram.zoomFactor} %`;
   } catch (e) {
     status.textContent = `${name}: ${(e as Error).message}`;
   }
@@ -53,6 +65,30 @@ if (wanted) {
   if (match) select.value = match;
 }
 if (params.get('zoom')) zoom.value = params.get('zoom')!;
+// Eigene Dateien werden nur im Browser gelesen, nichts verlässt den Rechner
+async function openFile(file: File): Promise<void> {
+  show(file.name, await file.text());
+  select.selectedIndex = -1;
+}
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files?.[0];
+  if (file) void openFile(file);
+  fileInput.value = '';
+});
+document.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  document.body.classList.add('app-drop');
+});
+document.addEventListener('dragleave', (e) => {
+  if (e.relatedTarget === null) document.body.classList.remove('app-drop');
+});
+document.addEventListener('drop', (e) => {
+  e.preventDefault();
+  document.body.classList.remove('app-drop');
+  const file = e.dataTransfer?.files[0];
+  if (file) void openFile(file);
+});
 select.addEventListener('change', showSelected);
-zoom.addEventListener('change', showSelected);
+zoom.addEventListener('change', () => show(current.name, current.text));
 showSelected();
