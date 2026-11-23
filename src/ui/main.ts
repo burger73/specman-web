@@ -98,6 +98,10 @@ stage.className = 'app-stage';
 const body = document.createElement('div');
 body.className = 'app-body';
 app.append(bar, body);
+// Die Leiste klebt oben: Scrollziele (Sprung zum Schritt, Pfeiltasten) dürfen nicht darunter landen
+const barHeight = () => document.documentElement.style.setProperty('--app-bar-h', `${bar.offsetHeight}px`);
+new ResizeObserver(barHeight).observe(bar);
+barHeight();
 
 /** Das geöffnete Dokument; das Modell im Editor ist die Wahrheit, die Darstellung wird daraus neu erzeugt */
 interface Doc {

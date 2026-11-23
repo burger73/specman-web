@@ -145,6 +145,7 @@ body { margin: 0; background: #f4f4f8; font-family: system-ui, sans-serif; }
 .sm-tag-icon { height: 10px; width: auto; }
 
 /* ---- App-Rahmen ---- */
+html { scroll-padding-top: calc(var(--app-bar-h, 41px) + 8px); }
 .app-bar { position: sticky; top: 0; z-index: 10; display: flex; gap: 8px; align-items: center; padding: 6px 10px; background: #fff; border-bottom: 1px solid #ccc; font-size: 13px; }
 .app-status { color: #666; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .app-stage { padding: 12px 20px 40px; }
@@ -166,7 +167,7 @@ body.app-drop .app-stage { outline: 3px dashed #3d5aa8; outline-offset: -8px; }
 /* ---- Schrittpalette (StepButtonBar) ---- */
 .app-body { display: flex; align-items: flex-start; }
 .app-body > .app-stage { flex: 1; min-width: 0; }
-.app-palette { position: sticky; top: 41px; flex: none; box-sizing: border-box; display: flex; flex-direction: column; gap: 1px; padding: 8px 4px; background: #fff; border-right: 1px solid #ddd; min-height: calc(100vh - 57px); }
+.app-palette { position: sticky; top: var(--app-bar-h, 41px); flex: none; box-sizing: border-box; display: flex; flex-direction: column; gap: 1px; padding: 8px 4px; background: #fff; border-right: 1px solid #ddd; min-height: calc(100vh - 57px); }
 .app-palette-btn { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; padding: 3px 8px 3px 4px; border: 1px solid transparent; border-radius: 4px; background: none; font: 12px system-ui, sans-serif; text-align: left; white-space: nowrap; cursor: pointer; }
 .app-palette-btn img { width: 22px; height: 22px; flex: none; }
 .app-palette-btn span { overflow: hidden; text-overflow: ellipsis; }

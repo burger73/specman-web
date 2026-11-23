@@ -8,10 +8,10 @@ Schritt fortschreiben oder löschen.
 - Phase 0–2 fertig (Tags `phase-1`, `phase-2`). Phase 3 läuft nach `PLAN-phase3.md`, der Plan ist mit Markus
   abgestimmt.
 - Erledigt und gepusht: 3.1 Palette ziehbar, 3.2 Spaltenbreiten, 3.3 Pfeiltasten, 3.4 Schrittverweise anlegen und
-  folgen (`b8df866`). 3.1–3.3 hat Markus in der Vorschau abgenommen, **3.4 noch nicht**: zu Beginn nachfragen.
+  folgen (`b8df866`). 3.1–3.4 hat Markus in der Vorschau abgenommen (3.4 nach dem Fix „Sprungziel nicht unter der Leiste“).
 - Strg+Alt+Links/Rechts (Bearbeitungsverlauf) bleibt laut Markus weg.
-- Offene Frage aus 3.3: Umschalt+Links/Rechts neben einem Schrittverweis hebt wie im Original die Auswahl auf. Markus
-  hat dazu noch nichts gesagt.
+- Umschalt+Links/Rechts neben einem Schrittverweis hebt die Auswahl auf: bleibt wie im Original (Markus).
+- SHEF-Code für 3.5: Markus will JRE (openjdk-headless per apt) + CFR-Decompiler.
 
 ## Arbeitsweise (gilt für jeden Schritt 3.x)
 

@@ -372,9 +372,11 @@ function check(name, ok, detail = '') {
   check('Strg+Klick springt zum Schritt 10', (at = await where()) === `${M}9/content/areas/0`, at);
   const visible = await page.$eval(`[data-path="${M}9/content/areas/0"]`, (e) => {
     const r = e.getBoundingClientRect();
-    return r.top >= 0 && r.bottom <= innerHeight;
+    const bar = document.querySelector('.app-bar').getBoundingClientRect();
+    return { ok: r.top >= bar.bottom && r.bottom <= innerHeight, top: r.top, bar: bar.bottom };
   });
-  check('der Schritt ist zu sehen', visible);
+  // die Leiste klebt oben, das Ziel darf nicht darunter verschwinden
+  check('der Schritt ist zu sehen (nicht unter der Leiste)', visible.ok, JSON.stringify(visible));
 
   // defekter Verweis: Ziel gelöscht
   await caret(S1, 'end');
