@@ -479,9 +479,13 @@ function check(name, ok, detail = '') {
   out = await save();
   check('Sitka entfernt face wieder', !step1Html(out).includes('face=') && step1Html(out).includes(' Every step'), step1Html(out).slice(0, 80));
   await selectWord(S1, 'ID');
+  // der Farbwähler des Browsers lässt sich nicht bedienen und blockiert offen Tastatur und Downloads:
+  // im Test abschalten und die Wahl nachstellen
+  await page.$eval('.app-color-input', (i) => {
+    i.showPicker = () => {};
+    i.click = () => {};
+  });
   await page.click('button[title="Farbe..."]');
-  // der Farbwähler des Browsers lässt sich nicht bedienen: schließen und die Wahl nachstellen
-  await k.press('Escape');
   await page.$eval('.app-color-input', (i) => {
     i.value = '#ff0000';
     i.dispatchEvent(new Event('change'));
@@ -523,6 +527,24 @@ function check(name, ok, detail = '') {
   await settle();
   check('die Combo zeigt danach den Listeneintrag', (await comboText('paragraph')) === 'Listeneintrag (Aufzählung)', await comboText('paragraph'));
   check('Listeneintrag mit ausgewähltem Wort', /simple\(1, 5582897d, [\s\S]*?list\(/.test(out.split('while(2,')[0]), (/simple\(1, [\s\S]{0,300}/.exec(out) || [''])[0]);
+
+  // ausschließend (Abweichung): Format im Listenpunkt löst ihn auf, Listentyp schaltet um, Liste auf Überschrift
+  const step1Part = (text) => text.split('while(2,')[0].split('simple(1, 5582897d,')[1] ?? '';
+  await paraMenu('Listeneintrag (nummeriert)');
+  out = await save();
+  check('anderer Listentyp schaltet um statt aufzulösen', /list\(ordered=true\)/.test(step1Part(out)), step1Part(out).slice(0, 300));
+  await paraMenu('Überschrift 1');
+  out = await save();
+  check('Überschrift im Listenpunkt löst ihn auf', !/list\(/.test(step1Part(out)) && /<h1>/.test(step1Part(out)), step1Part(out).slice(0, 300));
+  await press('Control+z', 3);
+  check('je ein Undo-Schritt', (await save()) === fixture(REF));
+  await caret(S1, 'end');
+  await paraMenu('Überschrift 2');
+  await paraMenu('Listeneintrag (Aufzählung)');
+  out = await save();
+  check('Listeneintrag auf einer Überschrift: Listenpunkt ohne Überschrift', /list\(/.test(step1Part(out)) && !/<h2>/.test(step1Part(out)), step1Part(out).slice(0, 300));
+  await press('Control+z', 2);
+  check('Undo: zwei Schritte', (await save()) === fixture(REF));
 
   // leerer neuer Schritt: Überschrift und tippen
   await open(REF);

@@ -1,4 +1,4 @@
-# Übergabe: weiter mit Phase 3, Schritt 3.6 (Einfüge-Werkzeuge)
+# Übergabe: 3.5 zu Ende testen, dann Phase 3, Schritt 3.6 (Einfüge-Werkzeuge)
 
 Stand 23.11.2026. Diese Datei ist der Einstieg für eine frische Session. Ist 3.6 erledigt, die Datei für den nächsten
 Schritt fortschreiben oder löschen.
@@ -10,9 +10,22 @@ Schritt fortschreiben oder löschen.
 - Erledigt und gepusht: 3.1 Palette ziehbar, 3.2 Spaltenbreiten, 3.3 Pfeiltasten, 3.4 Schrittverweise, 3.5
   Text-Werkzeuge. 3.1–3.4 hat Markus abgenommen (3.4 nach dem Fix „Sprungziel nicht unter der Leiste“), **3.5 noch
   nicht**: zu Beginn nachfragen.
-- Aus Markus' Test von 3.5 (23.11.): Listeneintrag mit Auswahl und Anzeige in der Combo behoben, Toolbar-Gruppen
-  zweizeilig wie im Original, Ausrichten von Text ohne Absatz packt ihn in `<div align>` (Abweichung, im Original
-  wirkungslos). Seinen restlichen Test (Punkte 3–7 der Testliste) hat er noch nicht zurückgemeldet.
+- **Zuerst: 3.5 mit Markus zu Ende testen.** Aus seinem Test am 23.11. abends schon behoben (Commits `f2b4e59`,
+  `fa39bd0` und der letzte): Listeneintrag mit Auswahl, Anzeige des Listeneintrags in der Combo, Toolbar-Gruppen
+  zweizeilig wie im Original, Ausrichten von Text ohne Absatz (`<div align>`, Abweichung), Absatz-Combo ausschließend
+  (Format im Listenpunkt löst ihn auf, Liste auf Überschrift macht Body Text, anderer Listentyp schaltet um;
+  Abweichung, Markus hatte keine Vorliebe, Empfehlung umgesetzt). **Noch nicht getestet** (Vorschau
+  `?sample=specman-reference-v1.4-model-v2.nsd`):
+  1. Absatzformat erneut: Liste ↔ Überschrift ↔ Absatz hin und her, Undo je ein Schritt.
+  2. Ausrichtung im normalen Schritttext und in Überschriften, aktiver Knopf hervorgehoben.
+  3. Zeichen: Schriftgröße (Menü markiert die Größe an der Auswahl), Schriftart Roboto/Courier/Sitka, Farbe
+     (Farbwähler des Browsers), Fett/Kursiv/Unterstrichen zeigen den Zustand.
+  4. Styles löschen (Strg+Umschalt+Y bzw. Knopf): alles wird schlichter Text, auch Links.
+  5. Mit Änderungsverfolgung: tippen, dann Absatzformat und Styles löschen, die Markierung bleibt.
+  6. Leerer Schritt: Text löschen, Alt+1, tippen, der Text landet in der Überschrift.
+  7. Speichern und neu laden: Formate bleiben. Wenn möglich auch die Datei im Original-Specman öffnen
+     (`<div align>`, `<font>`, Überschriften im Listenpunkt sind dort lesbar).
+  8. Toolbar auf seinem Bildschirm: zweizeilig, nichts ragt rechts hinaus.
 - Umschalt+Links/Rechts neben einem Schrittverweis hebt die Auswahl auf: bleibt wie im Original (Markus).
 - Strg+Alt+Links/Rechts (Bearbeitungsverlauf) bleibt weg (Markus).
 
@@ -41,14 +54,14 @@ Schritt fortschreiben oder löschen.
 
 - `npm test` (Vitest, 159 Tests), `npx tsc --noEmit -p .`
 - gegen den Dev-Server (systemd-User-Service `specman-web-dev`, nur auf `http://100.101.105.4:5180/`):
-  `node scripts/e2e-edit.cjs` (17), `node scripts/e2e-changes.cjs` (32), `node scripts/e2e-phase3.cjs` (95)
+  `node scripts/e2e-edit.cjs` (17), `node scripts/e2e-changes.cjs` (32), `node scripts/e2e-phase3.cjs` (100)
 - `scripts/probe-areas.cjs [datei.nsd]` listet die Bereiche mit Lage, `scripts/shot*.cjs` machen Screenshots
   (`shot-textformat.cjs` zeigt die Toolbar mit offenem Menü).
 - Testdatei mit allen Elementen: `test/fixtures/specman-reference-v1.4-model-v2.nsd` (Vorschau:
   `?sample=specman-reference-v1.4-model-v2.nsd`), Hyperlinks in den Schritten 32 ff.
 - Playwright-Skripte per Write-Tool anlegen, nicht per Heredoc (die Sicherheitsprüfung schlägt sonst manchmal an).
-- `dialog.close()` feuert `close` asynchron: im e2e auf `state: 'detached'` warten. Der Farbwähler des Browsers lässt
-  sich im e2e nicht bedienen (Escape, dann `change` am Feld auslösen).
+- `dialog.close()` feuert `close` asynchron: im e2e auf `state: 'detached'` warten. Der Farbwähler des Browsers
+  blockiert offen Tastatur und Downloads: im e2e `showPicker`/`click` des Felds abschalten, dann `change` auslösen.
 
 ## 3.6 Einfüge-Werkzeuge: was zu tun ist
 

@@ -80,6 +80,10 @@ Nassi-Shneiderman-Diagramme) nach TypeScript. Stand: Phase 1 (Bearbeiten ohne Ä
 - Ausrichten von Text, der in keinem Absatz-Element steht (Text direkt im Body, z. B. ein normal getippter Schritt):
   Das Original tut dabei nichts (`HTMLAlignAction` lässt Swings `p-implied` unter `body` aus). Hier wird der Text wie
   die Zweigköpfe in `<div align="…">` gepackt, das Original liest das ohne Weiteres (Markus, 23.11.2026).
+- Absatz-Combo ausschließend: Im Original ändert das Absatzformat nur den Text im Listenpunkt, so entstehen
+  Überschriften in Listenpunkten und umgekehrt. Hier löst ein Absatzformat im Listenpunkt diesen auf, ein Listeneintrag
+  macht aus einer Überschrift (o. Ä.) erst Body Text, und der andere Listentyp schaltet den Typ um statt aufzulösen.
+  Die Listenknöpfe der Toolbar verhalten sich weiter wie im Original (umschalten = auflösen).
 - Reader: Die Zusatz-Areas eines Listenpunkts behalten ihre Reihenfolge (Java sortiert nach Text/Tabelle/Bild).
 - Writer: schreibt standardmäßig Version 1.4.0 ins Envelope, beim Roundtrip die Version der gelesenen Datei.
 - Nicht in Phase 0: Bearbeiten, PDF-Export, PlantUML-Rendering (Platzhalter mit Quelltext), JSON-Format v1.

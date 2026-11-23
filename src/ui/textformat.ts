@@ -13,9 +13,11 @@
 // bleiben), deshalb sind diese drei hier selbst geschrieben. fontName, fontSize und foreColor liefern mit
 // styleWithCSS=false dasselbe wie Swing.
 import type { DiagramEditor } from '../core/editor.ts';
-import { BLOCKS } from './textedit.ts';
-import { locateArea, parentListItem } from '../core/areas.ts';
-import { plainOffset, rangeAt } from './focus.ts';
+import { BLOCKS, readTextArea } from './textedit.ts';
+import { dissolveListItem, locateArea, parentListItem } from '../core/areas.ts';
+import type { ListItemEditArea, TextEditArea } from '../core/model.ts';
+import { resolvePath } from '../core/paths.ts';
+import { currentFocus, plainOffset, rangeAt } from './focus.ts';
 import { applyFormat, selectedArea, toggleList, type TextInputHost } from './textinput.ts';
 
 /** Absatzformate wie in HTMLEditorActionFactory.createBlockElementActionList, dahinter die Listenaktionen */
@@ -347,9 +349,50 @@ export function createTextGroup(host: TextGroupHost, inline: Record<'bold' | 'it
   const editor = (): DiagramEditor | undefined => host.editor();
   let state: TextState | undefined;
 
+  /**
+   * Absatzformat oder Listeneintrag wählen. Die Combo wirkt hier ausschließend (Abweichung, Markus): Im Original ändert
+   * das Format nur den Text im Listenpunkt, so entstehen Überschriften in Listenpunkten und umgekehrt. Hier löst ein
+   * Absatzformat den Listenpunkt auf, ein Listeneintrag macht aus dem Absatz erst Body Text, und der andere Listentyp
+   * schaltet den Typ um. Alles jeweils ein Undo-Schritt: das DOM wird vorher angepasst und mit der Operation übernommen.
+   */
   const setParagraph = (tag: string): void => {
-    if (tag === 'UL' || tag === 'OL') toggleList(host, tag === 'OL');
-    else applyFormat(editor(), (el, range) => changeBlockType(el, range, tag));
+    const at = selectedArea();
+    const ed = editor();
+    if (!at || !ed) return;
+    const d = ed.diagram;
+    const path = at.el.dataset.path!;
+    const li = parentListItem(d, locateArea(d, path).containerPath);
+    const sel = document.getSelection()!;
+    if (tag === 'UL' || tag === 'OL') {
+      const ordered = tag === 'OL';
+      if (li) {
+        if (li.item.ordered !== ordered) {
+          host.structural((dd) => {
+            (resolvePath(dd, li.path) as ListItemEditArea).ordered = ordered;
+            return currentFocus();
+          });
+        }
+      } else {
+        // wie ParagraphCutter: der Absatz an der Schreibmarke (Ende der Auswahl) wird zum Listenpunkt
+        const block = textStateAt(at.el, sel.focusNode!).block;
+        if (block && block !== 'DIV') {
+          const caret = document.createRange();
+          caret.setStart(sel.focusNode!, sel.focusOffset);
+          changeBlockType(at.el, caret, 'DIV');
+        }
+        toggleList(host, ordered);
+      }
+    } else if (li) {
+      changeBlockType(at.el, at.range, tag);
+      const read = readTextArea(at.el);
+      host.structural((dd) => {
+        const area = resolvePath(dd, path) as TextEditArea;
+        area.text = read.text;
+        area.plainText = read.plainText;
+        area.markups = read.markups;
+        return dissolveListItem(dd, li.path);
+      });
+    } else applyFormat(ed, (el, range) => changeBlockType(el, range, tag));
     update();
   };
 

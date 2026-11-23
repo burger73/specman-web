@@ -114,6 +114,8 @@ den Listeneintrag. Die Toolbar-Gruppen sind jetzt wie im Original zweizeilig (`T
 `addControlsInTwoRows`), auf schmalen Fenstern brechen ganze Gruppen um.
 Ausrichten von Text ohne Absatz-Element packt ihn jetzt in `<div align>` (Original: keine Wirkung; Markus fand die
 Knöpfe so wirkungslos, siehe README).
+Die Absatz-Combo wirkt ausschließend (Listenpunkt + Überschrift mischen sich nicht mehr, siehe README); im e2e ist
+der Farbwähler abgeschaltet, weil er offen Tastatur und Downloads blockiert.
 
 ### 3.6 Einfüge-Werkzeuge (SHEF Insert-Gruppe)
 
